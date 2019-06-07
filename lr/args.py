@@ -10,8 +10,9 @@ args = Namespace(
   path=path,
   workdir=workdir,
   dataset_csv=path/'processed_dataset.csv',
+  cols=['class_label', 'scispacy_note'],
   modeldir=workdir/'models',
   min_freq=3,
-  vectorizer_path=workdir/'tfidf_vectorizer.pkl',
   bc_threshold=0.47,
+  start_seed=127,
   )
