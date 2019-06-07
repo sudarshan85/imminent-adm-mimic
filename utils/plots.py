@@ -5,9 +5,24 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from typing import List
 from scipy import interp
 from sklearn.metrics import roc_auc_score, roc_curve, auc, confusion_matrix
 from sklearn.metrics import average_precision_score, precision_recall_curve
+
+def print_top_words(feature_names: List[str], probs: np.ndarray, N: int):
+  words = sorted(zip(probs, feature_names), reverse=True)
+  pos = words[:N]
+  neg = words[:-(N + 1):-1]
+
+  print("Words associated with imminent threat: ")
+  for feat in pos:
+    print(np.round(feat[0], 2), feat[1])
+
+  print("***********************************************")
+  print("Words associated with not imminent threat: ")   
+  for feat in neg:
+    print(np.round(feat[0], 2), feat[1])
 
 def plot_confusion_matrix(ax, cm, classes, normalize=False, title=None, cmap=plt.cm.Blues):
   """
