@@ -9,7 +9,7 @@ from typing import List
 from sklearn.metrics import confusion_matrix, roc_auc_score
 from scipy import stats
 
-def mean_confidence_interval(data, conf=0.95, decimal=3):
+def _mean_confidence_interval(data, conf=0.95, decimal=3):
   assert(conf > 0 and conf < 1), f"Confidence interval must be within (0, 1). It is {conf}"
   a = 1.0 * np.array(data)
   n = len(a)
@@ -18,12 +18,12 @@ def mean_confidence_interval(data, conf=0.95, decimal=3):
   return np.round(m-h, decimal), np.round(m, 3), np.round(m+h, decimal)
 
 class BinaryAvgMetrics(object):
-  def __init__(self, targets: List[int], predictions: List[int], probs: List[float], names: List[str], decimal=3) -> None:
+  def __init__(self, targets: List[int], predictions: List[int], probs: List[float], decimal=3) -> None:
     assert (len(targets) == len(predictions) == len(probs)), f"Target list (length = {len(targets)}), predictions list (length = {len(predictions)}) and probabilities list (length = {len(probs)}) must all be of the same length!))"
     self.targs = targets
+    self.n_runs = len(self.targs)
     self.preds = predictions
     self.probs = probs
-    self.names = names
     self.decimal = 3
     
     self.cms = np.zeros((len(self.targs), 2, 2), dtype=np.int64)
@@ -57,28 +57,28 @@ class BinaryAvgMetrics(object):
   def sensitivity_avg(self, conf=None):
     se = (self.tps / (self.tps + self.fns))
     if conf is not None:
-      return mean_confidence_interval(se, conf)
+      return _mean_confidence_interval(se, conf)
 
     return np.round(se.mean(), self.decimal,)
   
   def specificity_avg(self, conf=None):
     sp = (self.tns / (self.tns + self.fps))
     if conf is not None:
-      return mean_confidence_interval(sp, conf)
+      return _mean_confidence_interval(sp, conf)
 
     return np.round(sp.mean(), self.decimal)
   
   def ppv_avg(self, conf=None):
     ppv = (self.tps / (self.tps + self.fps))
     if conf is not None:
-      return mean_confidence_interval(ppv, conf)
+      return _mean_confidence_interval(ppv, conf)
 
     return np.round(ppv.mean(), self.decimal)  
   
   def npv_avg(self, conf=None):
     npv = (self.tns / (self.tns + self.fns))
     if conf is not None:
-      return mean_confidence_interval(npv, conf)
+      return _mean_confidence_interval(npv, conf)
 
     return np.round(npv.mean(), self.decimal)
   
@@ -113,6 +113,54 @@ class BinaryAvgMetrics(object):
       return pd.DataFrame(d.values(), index=d.keys(), columns=['Lower', 'Mean', 'Upper', 'Confidence', 'Definition'])
   
   def __repr__(self):
-    s = f"Number of Runs: {len(self.targs)}\n"
+    s = f"Number of Runs: {self.n_runs}\n"
     s += f"Average Prevalence of positive class: {self.prevalence_avg()}"
     return s
+
+def get_best_model(bam: BinaryAvgMetrics, fnames: List[str]):
+  best_se, best_se_model = 0, None
+  best_sp, best_sp_model = 0, None
+  best_ppv, best_ppv_model = 0, None
+  best_auroc, best_auroc_model = 0, None
+  best_npv, best_npv_model = 0, None
+  best_f1, best_f1_model = 0, None
+
+  for i in range(bam.n_runs):
+    se = bam.tps[i] / (bam.tps[i] + bam.fns[i])
+    sp = bam.tns[i] / (bam.tns[i] + bam.fps[i])
+    ppv = bam.tps[i] / (bam.tps[i] + bam.fps[i])
+    npv = bam.tns[i] / (bam.tns[i] + bam.fns[i])
+    f1 = (2 * se * ppv) / (se + ppv)
+
+    if best_se < se:
+      best_se = se
+      best_se_model = fnames[i]    
+    if best_sp < sp:
+      best_sp = sp
+      best_sp_model = fnames[i]          
+    if best_ppv < ppv:
+      best_ppv = ppv
+      best_ppv_model = fnames[i]    
+    if best_npv < npv:
+      best_npv = npv
+      best_npv_model = fnames[i]  
+    if best_f1 < f1:
+      best_f1 = f1
+      best_f1_model = fnames[i]    
+
+  for i, (targ, prob) in enumerate(zip(bam.targs, bam.probs)):
+    auroc = roc_auc_score(targ, prob)
+    if best_auroc < auroc:
+      best_auroc = auroc
+      best_auroc_model = fnames[i]
+
+  d = {
+    'sensitivity': [best_se, best_se_model],
+    'specificity': [best_sp, best_sp_model],
+    'ppv': [best_ppv, best_ppv_model],
+    'auroc': [best_auroc, best_auroc_model],
+    'npv': [best_npv, best_npv_model],
+    'f1': [best_f1, best_f1_model],
+  }
+
+  return pd.DataFrame(d.values(), index=d.keys(), columns=['Value', 'Model File'])
