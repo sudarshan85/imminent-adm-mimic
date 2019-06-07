@@ -18,17 +18,18 @@ def mean_confidence_interval(data, conf=0.95, decimal=3):
   return np.round(m-h, decimal), np.round(m, 3), np.round(m+h, decimal)
 
 class BinaryAvgMetrics(object):
-  def __init__(self, targets: List, predictions: List, probs: List, decimal=3) -> None:
+  def __init__(self, targets: List[int], predictions: List[int], probs: List[float], names: List[str], decimal=3) -> None:
     assert (len(targets) == len(predictions) == len(probs)), f"Target list (length = {len(targets)}), predictions list (length = {len(predictions)}) and probabilities list (length = {len(probs)}) must all be of the same length!))"
     self.targs = targets
     self.preds = predictions
     self.probs = probs
+    self.names = names
     self.decimal = 3
     
     self.cms = np.zeros((len(self.targs), 2, 2), dtype=np.int64)
 
     for i, (targ, pred) in enumerate(zip(self.targs, self.preds)):
-      self.cms[i] = confusion_matrix(targ, pred)
+      self.cms[i] = confusion_matrix(targ, pred)  
 
   @property
   def tns(self):
