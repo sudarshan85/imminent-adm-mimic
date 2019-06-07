@@ -21,10 +21,10 @@ from args import args
 from utils.embeddings import PretrainedEmbeddings
 from utils.splits import set_all_splits, set_two_splits
 
-from classifier.dataset import NoteDataset
-from classifier.model import NoteClassifier
-from classifier.containers import ModelContainer, DataContainer
-from classifier.trainer import IgniteTrainer
+from cnn_classifier.dataset import NoteDataset
+from cnn_classifier.model import NoteClassifier
+from cnn_classifier.containers import ModelContainer, DataContainer
+from cnn_classifier.trainer import IgniteTrainer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -59,23 +59,15 @@ if __name__=='__main__':
     sys.exit(-1)
 
   partition = int(sys.argv[1])
+  if partition not in [1, 2, 3, 4]:
+    print(f"Usage: {sys.argv[0]} #(1-4)")
+    sys.exit(-1)
 
-  if partition == 1:
-    args.device = 'cuda:0'
-    # seeds = list(range(42, 44))
-    seeds = list(range(100, 125))
-  elif partition == 2:
-    args.device = 'cuda:1'
-    # seeds = list(range(44, 46))
-    seeds = list(range(125, 150))
-  elif partition == 3:
-    args.device = 'cuda:2'
-    # seeds = list(range(46, 48))
-    seeds = list(range(150, 175))
-  else:
-    args.device = 'cuda:3'
-    # seeds = list(range(48, 50))
-    seeds = list(range(175, 200))
+  args.device = f'cuda:{partition-1}'
+  l = list(range(args.start_seed, args.start_seed+100))
+  seeds = [l[i:i + 25] for i in range(0, len(l), 25)][partition-1]
+  print(args.device, seeds)
+  sys.exit(-1)
 
   preds = []
   targs = []
@@ -84,14 +76,15 @@ if __name__=='__main__':
   logger.info("Starting run")
 
   logger.debug("Loading data...")
-  ori_df = pd.read_csv(args.dataset_csv)
-  ori_df.drop(['note'], axis=1, inplace=True)
+  ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
   t1 = datetime.datetime.now()
+  prefix = args.checkpointer_prefix
 
   for seed in seeds:
-    args.checkpointer_prefix = args.checkpointer_prefix + '_seed_' + str(seed)
+    args.checkpointer_prefix = prefix + '_seed_' + str(seed)
     logger.info(f"Splitting data with seed: {seed}")
     df = set_two_splits(ori_df.copy(), 'test', seed=seed)
+    # df = get_sample(set_two_splits(ori_df.copy(), 'test', seed=seed))
     dc = DataContainer(df, NoteDataset, args.workdir, bs=args.batch_size, with_test=True,
         min_freq=args.min_freq, create_vec=True, weighted_sampling=True)
 
@@ -109,7 +102,7 @@ if __name__=='__main__':
     mc = ModelContainer(classifier, loss_fn, optimizer, reduce_lr)
     metrics = OrderedDict({'loss': Loss(loss_fn)})
 
-    ig = IgniteTrainer(mc, dc, args, metrics, log_training=False, early_stop=False)
+    ig = IgniteTrainer(mc, dc, args, metrics, log_training=False, early_stop=False, verbose=True)
     ig.run()
 
     # load the latest model
