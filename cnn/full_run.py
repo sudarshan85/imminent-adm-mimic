@@ -66,8 +66,6 @@ if __name__=='__main__':
   args.device = f'cuda:{partition-1}'
   l = list(range(args.start_seed, args.start_seed+100))
   seeds = [l[i:i + 25] for i in range(0, len(l), 25)][partition-1]
-  print(args.device, seeds)
-  sys.exit(-1)
 
   preds = []
   targs = []
