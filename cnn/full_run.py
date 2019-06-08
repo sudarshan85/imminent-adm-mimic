@@ -100,7 +100,7 @@ if __name__=='__main__':
     mc = ModelContainer(classifier, loss_fn, optimizer, reduce_lr)
     metrics = OrderedDict({'loss': Loss(loss_fn)})
 
-    ig = IgniteTrainer(mc, dc, args, metrics, log_training=False, early_stop=False, verbose=True)
+    ig = IgniteTrainer(mc, dc, args, metrics, log_training=False, early_stop=False, verbose=False)
     ig.run()
 
     # load the latest model
