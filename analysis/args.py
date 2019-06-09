@@ -15,5 +15,6 @@ args = Namespace(
   bc_threshold={
     'lr': 0.47,
     'rf': 0.32,
+    'cnn': 0.23,
     },
   )
