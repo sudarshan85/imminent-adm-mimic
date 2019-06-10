@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 import seaborn as sns
 
 from typing import List
@@ -20,26 +21,27 @@ def print_top_words(feature_names: List[str], probs: np.ndarray, N: int):
     print(np.round(feat[0], 2), feat[1])
 
   print("***********************************************")
-  print("Words associated with not imminent threat: ")   
+  print("Words associated with not imminent threat: ")
   for feat in neg:
     print(np.round(feat[0], 2), feat[1])
 
-def plot_prob(ax, df, threshold, cutoff=20, interval=12, is_agg=False, is_log=False):
-  plot_data = plot_data = df.loc[(df['relative_charttime']) > pd.to_timedelta(-cutoff, unit='d')][['relative_charttime', 'prob']].copy()
+def plot_prob(ax, df, threshold, cutoff=20, interval=12, granularity=5, is_agg=False, is_log=False):
+  plot_data = df.loc[(df['relative_charttime']) > pd.to_timedelta(-cutoff, unit='d')][['relative_charttime', 'prob']].copy()
   plot_data['interval'] = (plot_data['relative_charttime'].apply(lambda curr_time: int((curr_time - df['relative_charttime'].max())/pd.to_timedelta(interval, unit='h'))))
-  
+
   if is_agg:
     plot_data = plot_data[['interval', 'prob']].groupby(['interval']).agg(lambda x: np.average(x, weights=plot_data.loc[x.index, 'prob']))
-  
+
   plot_data.reset_index(inplace=True)
   if is_log:
     plot_data['interval'] = -np.log1p(-plot_data['interval'])
-    
+
   ax.axhline(y=threshold, label=f'Threshold = {threshold}', linestyle='--', color='r')
   sns.lineplot(x='interval', y='prob', data=plot_data, ax=ax)
   ax.set_xlabel(f'Time to ICU\n Notes charttime interval of {interval} hours')
   ax.set_ylabel('Probability')
-  ax.set_title("Probability of Imminent Threat as a function of Note Charttime")    
+  ax.set_title("Probability of Imminent Threat as a function of Note Charttime")
+  ax.xaxis.set_major_locator(ticker.MultipleLocator(granularity))
 
 def plot_confusion_matrix(ax, cm, classes, normalize=False, title=None, cmap=plt.cm.Blues):
   """
@@ -118,7 +120,7 @@ def plot_auprc(ax, y_true, probs):
 def plot_thresh_range(ax, y_true, prob, lower=0, upper=1, n_vals=5):
   metrics = np.zeros((4, n_vals))
   thresh_range = np.round(np.linspace(lower, upper, n_vals), 2)
-  
+
   for i, thresh in enumerate(thresh_range):
     y_pred = (prob > thresh).astype(np.int64)
     cm = confusion_matrix(y_true, y_pred)
@@ -127,7 +129,7 @@ def plot_thresh_range(ax, y_true, prob, lower=0, upper=1, n_vals=5):
     metrics[1][i] = np.round(tn/(tn+fp), 3)
     metrics[2][i] = np.round(tp/(tp+fp), 3)
     metrics[3][i] = np.round(tn/(tn+fn), 3)
-  
+
   df = pd.DataFrame(metrics, index=['sensitivity', 'specificity', 'ppv', 'npv'], columns=thresh_range)
   df=df.stack().reset_index()
   df.columns = ['Metric','Threshold','Value']
