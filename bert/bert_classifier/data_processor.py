@@ -24,8 +24,7 @@ class InputExample(object):
     A single training/test example for simple sequence classification.
   """
   eid: int
-  txt_a: str
-  txt_b: str=None
+  text: str
   label: str=None
 
 @dataclass
@@ -47,9 +46,9 @@ def read_df(df: pd.DataFrame, txt_col, label_col, set_type='train') -> List[Inpu
   examples = []  
   for i, row in tqdm(df.iterrows(), total=df.shape[0]):
     eid = f'{set_type}-{i}'
-    txt_a = row[txt_col]
+    text = row[txt_col]
     label = row[label_col]
-    examples.append(InputExample(eid=eid, txt_a=txt_a, label=label))
+    examples.append(InputExample(eid=eid, text=text, label=label))
 
   return examples
 
@@ -60,15 +59,15 @@ def convert_examples_to_features(examples: List[InputExample], label_list: List[
   features = []
   n_trunc = 0
   for example in tqdm(examples):
-    tokens_a = tokenizer.tokenize(example.txt_a)
+    tokens = tokenizer.tokenize(example.text)
     
     # Account for [CLS], [SEP] with -2
-    if len(tokens_a) > max_seq_len - 2:
-      logger.debug(f"Sample with ID '{example.eid}' has sequence length {len(tokens_a)} greater than max_seq_len ({max_seq_len}). Truncating sequence.")      
-      tokens_a = tokens_a[:(max_seq_len - 2)]
+    if len(tokens) > max_seq_len - 2:
+      logger.debug(f"Sample with ID '{example.eid}' has sequence length {len(tokens)} greater than max_seq_len ({max_seq_len}). Truncating sequence.")      
+      tokens = tokens[:(max_seq_len - 2)]
       n_trunc += 1
 
-    tokens = ['[CLS]'] + tokens_a + ['[SEP]']
+    tokens = ['[CLS]'] + tokens + ['[SEP]']
     segment_ids = [0] * len(tokens)
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
@@ -93,4 +92,46 @@ def convert_examples_to_features(examples: List[InputExample], label_list: List[
     features.append(InputFeatures(input_ids=input_ids, input_mask=input_mask, segment_ids=segment_ids, label_id=label_id))
 
   logger.warn(f"{(n_trunc/len(examples))*100:0.1f}% ({n_trunc}) of total examples have sequence length longer than max_seq_len ({max_seq_len})")
-  return features   
+  return features
+
+# @dataclass
+# class DataContainer:
+#   tokenizer: BertTokenizer,
+#   df: pd.DataFrame,
+#   txt_col: str,
+#   label_col: str,
+#   labels: List[Union[int, str]],
+#   max_seq_len: int,
+#   bs: int,
+#   n_epochs: int,
+
+#   def __post_init__(self):
+#     self.train_ex = read_df(df.loc[(df['split'] == 'train')], txt_col, label_col)
+#     self.train_feats = convert_examples_to_features(train_ex, labels, max_seq_len, tokenizer)
+
+#     self._create_dataset()
+#     self._create_dataloaders()
+
+#     self.n_steps = (len(self.train_ds) // bs) * n_epochs
+
+#   def _create_dataset(self):
+#     input_ids = torch.tensor([f.input_ids for f in train_feats], dtype=torch.long)
+#     input_mask = torch.tensor([f.input_mask for f in train_feats], dtype=torch.long)
+#     segment_ids = torch.tensor([f.segment_ids for f in train_feats], dtype=torch.long)
+#     label_ids = torch.tensor([f.label_id for f in train_feats], dtype=torch.long)
+#     self.train_ds = TensorDataset(input_ids, input_mask, segment_ids, label_ids)
+
+#   def _create_dataloaders(self):
+#     self.train_dl = DataLoader(train_ds, sampler=RandomSampler(train_ds), batch_size=bs)
+
+# @dataclass
+# class ModelContainer:
+#   model: BertForSequenceClassification,
+#   lr: float,
+#   warmup_prop: float,
+#   wd: float,
+#   n_steps: int,
+#   schedule: str='warmup_linear',
+
+#   def __post_init__(self):
+#     self.optimizer = build_optimizer(list(model.named_parameters()), n_steps, lr, warmup_prop, wd, schedule)

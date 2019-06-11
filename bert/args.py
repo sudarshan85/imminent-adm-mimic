@@ -18,7 +18,6 @@ args = Namespace (
   device='cuda:3',
   start_seed=127,
   cols=['class_label', 'note'],
-  labels=[0, 1],
   lr=5e-5,
   n_epochs=1,
   wd=0.1,
