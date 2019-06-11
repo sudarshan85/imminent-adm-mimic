@@ -92,5 +92,5 @@ def convert_examples_to_features(examples: List[InputExample], label_list: List[
       label_id = example.label
     features.append(InputFeatures(input_ids=input_ids, input_mask=input_mask, segment_ids=segment_ids, label_id=label_id))
 
-  logger.warn(f"{(n_trunc/len(examples))*100:0.1f} ({n_trunc}) of total examples have sequence length longer than max_seq_len ({max_seq_len})")
+  logger.warn(f"{(n_trunc/len(examples))*100:0.1f}% ({n_trunc}) of total examples have sequence length longer than max_seq_len ({max_seq_len})")
   return features   
