@@ -2,6 +2,7 @@
 
 import pdb
 import logging
+import random
 import numpy as np
 import pandas as pd
 import torch
@@ -65,7 +66,6 @@ def build_optimizer(named_params: List[Tuple[int, torch.nn.parameter.Parameter]]
   
   return BertAdam(grouped_params, lr=lr, warmup=warmup_prop, t_total=n_steps, schedule=schedule, weight_decay=wd)
 
-
 def get_sample(df, sample_pct=0.01, with_val=True, seed=None):
   train = df.loc[(df['split']) == 'train'].sample(frac=sample_pct, random_state=seed)
   train.reset_index(inplace=True, drop=True)
@@ -76,6 +76,11 @@ def get_sample(df, sample_pct=0.01, with_val=True, seed=None):
     return pd.concat([train, val], axis=0) 
 
   return train  
+
+def set_global_seed(seed=None):
+  random.seed(seed)
+  np.random.seed(seed)
+  torch.manual_seed(seed)
 
 def convert_examples_to_features(examples: List[InputExample], label_list: List[Union[int, str]], max_seq_len: int, tokenizer: BertTokenizer, is_pred=False) -> List[InputFeatures]:
   """
@@ -125,32 +130,66 @@ sh = logging.StreamHandler()
 sh.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(sh)
 
-
 if __name__=='__main__':
+  seed=42
+  set_global_seed(seed)
+
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
-  df = get_sample(set_two_splits(ori_df.copy(), 'val'))
+  df = get_sample(set_two_splits(ori_df.copy(), 'val'), seed=seed)
+
   tokenizer = BertTokenizer.from_pretrained(args.bert_dir, do_lower_case=args.do_lower_case)
   train_ex = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
   labels = 1-df['class_label'].unique()
   train_feats = convert_examples_to_features(train_ex, labels, args.max_seq_len, tokenizer)
 
   model = BertForSequenceClassification.from_pretrained(args.bert_dir, num_labels=1)
+  model = model.to(args.device)
   loss_fn = nn.BCEWithLogitsLoss()
 
-  input_ids = torch.tensor([f.input_ids for f in train_feats], dtype=torch.long)
-  input_mask = torch.tensor([f.input_mask for f in train_feats], dtype=torch.long)
-  segment_ids = torch.tensor([f.segment_ids for f in train_feats], dtype=torch.long)
-  label_ids = torch.tensor([f.label_id for f in train_feats], dtype=torch.long)
+  all_input_ids = torch.tensor([f.input_ids for f in train_feats], dtype=torch.long)
+  all_input_mask = torch.tensor([f.input_mask for f in train_feats], dtype=torch.long)
+  all_segment_ids = torch.tensor([f.segment_ids for f in train_feats], dtype=torch.long)
+  all_label_ids = torch.tensor([f.label_id for f in train_feats], dtype=torch.long)
 
-  train_ds = TensorDataset(input_ids, input_mask, segment_ids, label_ids)
+  train_ds = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
   train_dl = DataLoader(train_ds, sampler=RandomSampler(train_ds), batch_size=args.bs)
 
   n_steps = (len(train_ds)//args.bs) * args.n_epochs
   optimizer = build_optimizer(list(model.named_parameters()), n_steps, args.lr, args.warmup_prop, args.wd, args.schedule)
 
-  input_id, input_mask, segment_id, label_id = next(iter(train_dl))
-  output = model(input_id, input_mask, segment_id)
-  loss = loss_fn(output.view(-1), label_id.float())
-  print(loss.item())  
+  # input_id, input_mask, segment_id, label_id = next(iter(train_dl))
+  # output = model(input_id, input_mask, segment_id)
+  # loss = loss_fn(output.view(-1), label_id.float())
+  # print(loss.mean().item())  
 
+  global_step = 0
+  nb_tr_steps = 0
+  tr_loss = 0
+
+  logger.info("***** Running training *****")
+  logger.info(f"  Num examples = {len(train_ex)}")
+  logger.info(f"  Batch size = {args.bs}")
+  logger.info(f"  Num steps = {n_steps}")  
+
+  model.train()
+  for _ in trange(int(args.n_epochs), desc='Epoch'):
+    tr_loss = 0
+    nb_tr_examples, nb_tr_steps = 0, 0
+    for step, batch in enumerate(tqdm(train_dl, desc='Iteration')):
+      batch = tuple(t.to(args.device) for t in batch)
+      input_ids, input_mask, segment_ids, label_ids = batch
+      logits = model(input_ids, segment_ids, input_mask, labels=None) 
+      loss = loss_fn(logits.view(-1), label_ids.float())
+      loss = loss.mean()
+      logger.info(loss.item())
+      loss.backward()
+
+      tr_loss += loss.item()
+      nb_tr_examples += input_ids.size(0)
+      nb_tr_steps += 1
+
+      optimizer.step()
+      optimizer.zero_grad()
+      global_step += 1
+    
   logger.info("Done")
