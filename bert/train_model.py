@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import pdb
 import logging
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ from typing import List, Union, Tuple, Optional
 from tqdm import tqdm, trange
 from dataclasses import dataclass
 
+from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data.sampler import RandomSampler
 
@@ -131,7 +133,9 @@ if __name__=='__main__':
   train_ex = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
   labels = 1-df['class_label'].unique()
   train_feats = convert_examples_to_features(train_ex, labels, args.max_seq_len, tokenizer)
+
   model = BertForSequenceClassification.from_pretrained(args.bert_dir, num_labels=1)
+  loss_fn = nn.BCEWithLogitsLoss()
 
   input_ids = torch.tensor([f.input_ids for f in train_feats], dtype=torch.long)
   input_mask = torch.tensor([f.input_mask for f in train_feats], dtype=torch.long)
@@ -143,5 +147,10 @@ if __name__=='__main__':
 
   n_steps = (len(train_ds)//args.bs) * args.n_epochs
   optimizer = build_optimizer(list(model.named_parameters()), n_steps, args.lr, args.warmup_prop, args.wd, args.schedule)
+
+  input_id, input_mask, segment_id, label_id = next(iter(train_dl))
+  output = model(input_id, input_mask, segment_id)
+  loss = loss_fn(output.view(-1), label_id.float())
+  print(loss.item())  
 
   logger.info("Done")
