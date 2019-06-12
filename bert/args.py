@@ -25,5 +25,6 @@ args = Namespace (
   schedule='warmup_linear',
   gradient_accumulation_steps=1,
   loss_scale=0,
-  do_train=True,
+  do_train=False,
+  do_eval=True,
 )
