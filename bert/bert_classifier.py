@@ -224,7 +224,7 @@ def main():
     # Save a trained model, configuration and tokenizer    
     # Only save the model itself
     model_to_save = model.module if hasattr(model, 'module') else model
-    torch.save(model_to_save.state_dict(), args.workdir/'pytorch.bin')
+    torch.save(model_to_save.state_dict(), args.workdir/'pytorch_model.bin')
     model_to_save.config.to_json_file(args.workdir/'bert_config.json')
     tokenizer.save_vocabulary(args.workdir)
 
@@ -242,7 +242,7 @@ def main():
     all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
     all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
     all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
-    all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
+    all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
 
     eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
     # Run prediction for full data
@@ -265,13 +265,16 @@ def main():
       loss_fct = nn.BCEWithLogitsLoss()
       tmp_eval_loss = loss_fct(logits.view(-1), label_ids.float())
     
-      eval_loss += tmp_eval_loss.mean().item()
+      eval_loss += tmp_eval_loss.mean().item()      
       nb_eval_steps += 1
+
+      pred = (torch.sigmoid(logits) > args.bc_threshold).long()      
+      pred = pred.detach().cpu().numpy()
       if len(preds) == 0:
-        preds.append(logits.detach().cpu().numpy())
+        preds.append(pred)
       else:
         preds[0] = np.append(
-          preds[0], logits.detach().cpu().numpy(), axis=0)
+          preds[0], pred, axis=0)
 
     eval_loss = eval_loss / nb_eval_steps
     preds = np.squeeze(preds[0])

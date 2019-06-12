@@ -27,4 +27,5 @@ args = Namespace (
   loss_scale=0,
   do_train=False,
   do_eval=True,
+  bc_threshold=0.5,
 )
