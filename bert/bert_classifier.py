@@ -137,8 +137,8 @@ def set_global_seed(seed=None, n_gpu=0):
 
 def main():
   seed=42
-  # n_gpu = torch.cuda.device_count()
-  n_gpu = 0
+  n_gpu = torch.cuda.device_count()
+  # n_gpu = 0
   set_global_seed(seed, n_gpu)
 
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
