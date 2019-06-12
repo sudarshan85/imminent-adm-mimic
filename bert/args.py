@@ -23,4 +23,7 @@ args = Namespace (
   wd=0.1,
   warmup_prop=0.1,
   schedule='warmup_linear',
+  gradient_accumulation_steps=1,
+  loss_scale=0,
+  do_train=True,
 )
