@@ -5,6 +5,7 @@ import logging
 import random
 import pickle
 import numpy as np
+import datetime
 import pandas as pd
 import torch
 import sys
@@ -231,70 +232,90 @@ def evaluation(eval_dataloader):
   return eval_loss, probs, preds
 
 def main():
-  seed=42
-  set_global_seed(seed)
-
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
   # df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
-  df = set_two_splits(ori_df.copy(), 'test')
+  # df = set_two_splits(ori_df.copy(), 'test')
 
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
+  seeds = list(range(args.start_seed, args.start_seed + 100))
 
   if args.gradient_accumulation_steps < 1:
     raise ValueError(f"Invalid gradient_accumulation_steps parameter: {args.gradient_accumulation_steps}, should be >= 1")
 
   args.bs = args.bs // args.gradient_accumulation_steps
-  tokenizer = BertTokenizer.from_pretrained(args.bert_dir, do_lower_case=args.do_lower_case) 
+  t1 = datetime.datetime.now()
+  tokenizer = BertTokenizer.from_pretrained(args.bert_dir, do_lower_case=args.do_lower_case)
+  
+  preds, targs, probs = [], [], []
+  for seed in seeds:
+    set_global_seed(seed)
+    logger.info(f"Splitting data with seed: {seed}")
+    df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
+    # df = set_two_splits(ori_df.copy(), 'test')
  
-  if args.do_train:
-    train_examples = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
-    train_features = convert_examples_to_features(train_examples, args.labels, args.max_seq_len, tokenizer)
-    num_train_optimization_steps = int(len(train_examples) / args.bs /args.gradient_accumulation_steps) * args.n_epochs
-    
-    logger.info("***** Running training *****")
-    logger.info("  Num examples = %d", len(train_examples))
-    logger.info("  Batch size = %d", args.bs)
-    logger.info("  Num steps = %d", num_train_optimization_steps)
+    if args.do_train:
+      train_examples = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
+      train_features = convert_examples_to_features(train_examples, args.labels, args.max_seq_len, tokenizer)
+      num_train_optimization_steps = int(len(train_examples) / args.bs /args.gradient_accumulation_steps) * args.n_epochs
+      
+      logger.info("***** Running training *****")
+      logger.info("  Num examples = %d", len(train_examples))
+      logger.info("  Batch size = %d", args.bs)
+      logger.info("  Num steps = %d", num_train_optimization_steps)
 
-    all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
-    all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
-    all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
-    all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
+      all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
+      all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
+      all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
+      all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
 
-    train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-    train_dataloader = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=args.bs, drop_last=True)
-    loss = train(train_dataloader, num_train_optimization_steps)
+      train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+      train_dataloader = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=args.bs, drop_last=True)
+      loss = train(train_dataloader, num_train_optimization_steps)
 
-    logger.info(f"Final average loss: {loss:0.3f}")
+      logger.info(f"Final average loss: {loss:0.3f}")
 
-  if args.do_eval:
-    eval_examples = read_df(df.loc[(df['split'] == 'test')], 'note', 'class_label', set_type='test')  
-    eval_features = convert_examples_to_features(eval_examples, args.labels, args.max_seq_len, tokenizer)
-    logger.info("***** Running evaluation *****")
-    logger.info("  Num examples = %d", len(eval_examples))
-    logger.info("  Batch size = %d", args.bs)
-    all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
-    all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
-    all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
-    all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
+    if args.do_eval:
+      eval_examples = read_df(df.loc[(df['split'] == 'test')], 'note', 'class_label', set_type='test')  
+      eval_features = convert_examples_to_features(eval_examples, args.labels, args.max_seq_len, tokenizer)
+      logger.info("***** Running evaluation *****")
+      logger.info("  Num examples = %d", len(eval_examples))
+      logger.info("  Batch size = %d", args.bs)
+      all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
+      all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
+      all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
+      all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
 
-    eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-    # Run prediction for full data
-    eval_dataloader = DataLoader(eval_data, sampler=SequentialSampler(eval_data), batch_size=args.bs)
-    eval_loss, probs, preds = evaluation(eval_dataloader)
-    logger.info(f"{len(probs)}, {len(preds)}")
-    assert(len(probs) == len(preds) == len(all_label_ids.numpy()))
+      eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+      # Run prediction for full data
+      eval_dataloader = DataLoader(eval_data, sampler=SequentialSampler(eval_data), batch_size=args.bs)
+      eval_loss, prob, pred = evaluation(eval_dataloader)
+      assert(len(prob) == len(pred) == len(all_label_ids.numpy()))
 
-    with open(args.workdir/'pred.pkl', 'wb') as f:
-      pickle.dump(all_label_ids.numpy(), f)
-      pickle.dump(preds, f)
-      pickle.dump(probs, f)
+      preds.append(pred)
+      probs.append(prob)
+      targs.append(all_label_ids.numpy())
+      torch.cuda.empty_cache()
 
-    result = compute_metrics(preds, all_label_ids.numpy())
-    logger.info("***** Eval results *****")
-    logger.info(f"  Evaluation Loss: {eval_loss}")
-    for key in sorted(result.keys()):
-      logger.info(f"  {key} = {str(result[key])}")
+      # with open(args.workdir/'pred.pkl', 'wb') as f:
+      #   pickle.dump(all_label_ids.numpy(), f)
+      #   pickle.dump(preds, f)
+      #   pickle.dump(probs, f)
 
+      result = compute_metrics(preds, all_label_ids.numpy())
+      logger.info("***** Eval results *****")
+      logger.info(f"  Evaluation Loss: {eval_loss}")
+      for key in sorted(result.keys()):
+        logger.info(f"  {key} = {str(result[key])}")
+
+  dt = datetime.datetime.now() - t1
+  logger.info(f"{len(seeds)} runs completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes.")
+  preds_file = args.workdir/f'preds.pkl'
+  logger.info(f"Writing predictions to {preds_file}.")
+
+  with open(preds_file, 'wb') as f:
+    pickle.dump(targs, f)
+    pickle.dump(preds, f)
+    pickle.dump(probs, f)
+        
 if __name__ == "__main__":
   main()
