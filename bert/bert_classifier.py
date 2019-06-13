@@ -3,6 +3,7 @@
 import pdb
 import logging
 import random
+import pickle
 import numpy as np
 import pandas as pd
 import torch
@@ -234,8 +235,8 @@ def main():
   set_global_seed(seed)
 
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
-  df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
-  # df = set_two_splits(ori_df.copy(), 'test')
+  # df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
+  df = set_two_splits(ori_df.copy(), 'test')
 
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
 
@@ -282,7 +283,12 @@ def main():
     eval_dataloader = DataLoader(eval_data, sampler=SequentialSampler(eval_data), batch_size=args.bs)
     eval_loss, probs, preds = evaluation(eval_dataloader)
     logger.info(f"{len(probs)}, {len(preds)}")
-    assert(len(probs) == len(preds))
+    assert(len(probs) == len(preds) == len(all_label_ids.numpy()))
+
+    with open(args.workdir/'pred.pkl', 'wb') as f:
+      pickle.dump(all_label_ids.numpy(), f)
+      pickle.dump(preds, f)
+      pickle.dump(probs, f)
 
     result = compute_metrics(preds, all_label_ids.numpy())
     logger.info("***** Eval results *****")
