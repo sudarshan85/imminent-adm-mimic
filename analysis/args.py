@@ -15,5 +15,6 @@ args = Namespace(
     'lr': 0.47,
     'rf': 0.32,
     'cnn': 0.23,
+    'gbm': 0.3,
     },
   )
