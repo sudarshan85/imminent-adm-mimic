@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import torch
 from argparse import Namespace
 from pathlib import Path
 
@@ -28,4 +29,7 @@ args = Namespace (
   do_train=True,
   do_eval=False,
   bc_threshold=0.5,
+  num_labels=1,
+  labels=[0, 1],
+  n_gpu=torch.cuda.device_count(),
 )
