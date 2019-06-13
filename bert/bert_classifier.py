@@ -64,12 +64,12 @@ def read_df(df: pd.DataFrame, txt_col, label_col, set_type='train') -> List[Inpu
 
   return examples
 
-def get_sample(df, sample_pct=0.01, with_val=True, seed=None):
+def get_sample(df: pd.DataFrame, sample_pct: float=0.01, val_test: Optional[str]=None, seed: Optional[int]=None):
   train = df.loc[(df['split']) == 'train'].sample(frac=sample_pct, random_state=seed)
   train.reset_index(inplace=True, drop=True)
 
-  if with_val:
-    val = df.loc[(df['split']) == 'val'].sample(frac=sample_pct, random_state=seed)
+  if val_test is not None:
+    val = df.loc[(df['split']) == val_test].sample(frac=sample_pct, random_state=seed)
     val.reset_index(inplace=True, drop=True)
     return pd.concat([train, val], axis=0) 
 
@@ -194,6 +194,7 @@ def evaluation(eval_dataloader):
   eval_loss = 0
   nb_eval_steps = 0
   preds = []
+  probs = []
 
   for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataloader, desc="Evaluating"):
     input_ids = input_ids.to(args.device)
@@ -208,8 +209,14 @@ def evaluation(eval_dataloader):
     eval_loss += tmp_eval_loss.mean().item()      
     nb_eval_steps += 1
 
-    pred = (torch.sigmoid(logits) > args.bc_threshold).long()      
-    pred = pred.detach().cpu().numpy()
+    prob = torch.sigmoid(logits).detach().cpu().numpy()
+    if len(probs) == 0:
+      probs.append(prob)
+    else:
+      probs[0] = np.append(
+        probs[0], prob, axis=0)
+
+    pred = (prob > args.bc_threshold).astype(np.int64)
     if len(preds) == 0:
       preds.append(pred)
     else:
@@ -217,17 +224,18 @@ def evaluation(eval_dataloader):
         preds[0], pred, axis=0)
 
   eval_loss = eval_loss / nb_eval_steps
+  probs = np.squeeze(probs[0])
   preds = np.squeeze(preds[0])
 
-  return preds
+  return eval_loss, probs, preds
 
 def main():
   seed=42
   set_global_seed(seed)
 
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
-  df = get_sample(set_two_splits(ori_df.copy(), 'val'), seed=seed)
-  # df = set_two_splits(ori_df.copy(), 'val')
+  df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
+  # df = set_two_splits(ori_df.copy(), 'test')
 
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
 
@@ -259,7 +267,7 @@ def main():
     logger.info(f"Final average loss: {loss:0.3f}")
 
   if args.do_eval:
-    eval_examples = read_df(df.loc[(df['split'] == 'val')], 'note', 'class_label')   
+    eval_examples = read_df(df.loc[(df['split'] == 'test')], 'note', 'class_label', set_type='test')  
     eval_features = convert_examples_to_features(eval_examples, args.labels, args.max_seq_len, tokenizer)
     logger.info("***** Running evaluation *****")
     logger.info("  Num examples = %d", len(eval_examples))
@@ -272,20 +280,15 @@ def main():
     eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
     # Run prediction for full data
     eval_dataloader = DataLoader(eval_data, sampler=SequentialSampler(eval_data), batch_size=args.bs)
-    preds = evaluation(eval_dataloader)
+    eval_loss, probs, preds = evaluation(eval_dataloader)
+    logger.info(f"{len(probs)}, {len(preds)}")
+    assert(len(probs) == len(preds))
 
     result = compute_metrics(preds, all_label_ids.numpy())
-
-    result['eval_loss'] = eval_loss
-    result['global_step'] = global_step
-    result['loss'] = loss
-
-    with open(args.workdir/'eval_results.txt', "w") as writer:
-      logger.info("***** Eval results *****")
-      for key in sorted(result.keys()):
-        logger.info(f"  {key} = {str(result[key])}")
-        writer.write(f"  {key} = {str(result[key])}\n")  
-
+    logger.info("***** Eval results *****")
+    logger.info(f"  Evaluation Loss: {eval_loss}")
+    for key in sorted(result.keys()):
+      logger.info(f"  {key} = {str(result[key])}")
 
 if __name__ == "__main__":
   main()
