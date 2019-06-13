@@ -57,8 +57,8 @@ def read_df(df: pd.DataFrame, txt_col, label_col, set_type='train') -> List[Inpu
     of InputExample
   """
   logger.debug(f"Reading column text column {txt_col} and label column {label_col}")
-  examples = []  
-  for i, row in tqdm(df.iterrows(), total=df.shape[0]):
+  examples = []
+  for i, row in tqdm(df.iterrows(), total=df.shape[0], desc='Reading'):
     eid = f'{set_type}-{i}'
     text = row[txt_col]
     label = row[label_col]
@@ -73,7 +73,7 @@ def get_sample(df: pd.DataFrame, sample_pct: float=0.01, val_test: Optional[str]
   if val_test is not None:
     val = df.loc[(df['split']) == val_test].sample(frac=sample_pct, random_state=seed)
     val.reset_index(inplace=True, drop=True)
-    return pd.concat([train, val], axis=0) 
+    return pd.concat([train, val], axis=0)
 
   return train
 
@@ -83,12 +83,12 @@ def convert_examples_to_features(examples: List[InputExample], label_list: List[
   """
   features = []
   n_trunc = 0
-  for example in tqdm(examples):
+  for example in tqdm(examples, desc='Vectorization'):
     tokens = tokenizer.tokenize(example.text)
-    
+
     # Account for [CLS], [SEP] with -2
     if len(tokens) > max_seq_len - 2:
-      logger.debug(f"Sample with ID '{example.eid}' has sequence length {len(tokens)} greater than max_seq_len ({max_seq_len}). Truncating sequence.")      
+      logger.debug(f"Sample with ID '{example.eid}' has sequence length {len(tokens)} greater than max_seq_len ({max_seq_len}). Truncating sequence.")
       tokens = tokens[:(max_seq_len - 2)]
       n_trunc += 1
 
@@ -96,7 +96,7 @@ def convert_examples_to_features(examples: List[InputExample], label_list: List[
     segment_ids = [0] * len(tokens)
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-    # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are 
+    # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are
     # attended to.
     input_mask = [1] * len(input_ids)
 
@@ -175,7 +175,7 @@ def train(train_dataloader, num_train_optimization_steps):
       if (step + 1) % args.gradient_accumulation_steps == 0:
         optimizer.step()
         optimizer.zero_grad()
-    
+
     avg_epoch_loss += epoch_loss / nb_tr_steps
 
   model_to_save = model.module if hasattr(model, 'module') else model
@@ -204,8 +204,8 @@ def evaluation(eval_dataloader):
     with torch.no_grad():
       logits = model(input_ids, segment_ids, input_mask, labels=None)
 
-    tmp_eval_loss = loss_fct(logits.view(-1), label_ids.float())  
-    eval_loss += tmp_eval_loss.mean().item()      
+    tmp_eval_loss = loss_fct(logits.view(-1), label_ids.float())
+    eval_loss += tmp_eval_loss.mean().item()
     nb_eval_steps += 1
 
     prob = torch.sigmoid(logits).detach().cpu().numpy()
@@ -231,8 +231,8 @@ def evaluation(eval_dataloader):
 def main():
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
-  seeds = list(range(args.start_seed, args.start_seed + 100))
-  # seeds = list(range(42, 44))
+  # seeds = list(range(args.start_seed, args.start_seed + 100))
+  seeds = list(range(42, 44))
 
   if args.gradient_accumulation_steps < 1:
     raise ValueError(f"Invalid gradient_accumulation_steps parameter: {args.gradient_accumulation_steps}, should be >= 1")
@@ -240,20 +240,20 @@ def main():
   args.bs = args.bs // args.gradient_accumulation_steps
   t1 = datetime.datetime.now()
   tokenizer = BertTokenizer.from_pretrained(args.bert_dir, do_lower_case=args.do_lower_case)
-  
+
   preds, targs, probs = [], [], []
-  for seed in seeds:
+  for seed in tqdm(seeds, desc='Runs'):
     # seed = 42
     set_global_seed(seed)
     logger.info(f"Splitting data with seed: {seed}")
-    # df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
-    df = set_two_splits(ori_df.copy(), 'test')
+    df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)
+    # df = set_two_splits(ori_df.copy(), 'test', seed=seed)
 
     if args.do_train:
       train_examples = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
       train_features = convert_examples_to_features(train_examples, args.labels, args.max_seq_len, tokenizer)
       num_train_optimization_steps = int(len(train_examples) / args.bs /args.gradient_accumulation_steps) * args.n_epochs
-      
+
       logger.info("***** Running training *****")
       logger.info("  Num examples = %d", len(train_examples))
       logger.info("  Batch size = %d", args.bs)
@@ -271,7 +271,7 @@ def main():
       logger.info(f"Final average loss: {loss:0.3f}")
 
     if args.do_eval:
-      eval_examples = read_df(df.loc[(df['split'] == 'test')], 'note', 'class_label', set_type='test')  
+      eval_examples = read_df(df.loc[(df['split'] == 'test')], 'note', 'class_label', set_type='test')
       eval_features = convert_examples_to_features(eval_examples, args.labels, args.max_seq_len, tokenizer)
       logger.info("***** Running evaluation *****")
       logger.info("  Num examples = %d", len(eval_examples))
@@ -311,6 +311,6 @@ def main():
     pickle.dump(targs, f)
     pickle.dump(preds, f)
     pickle.dump(probs, f)
-        
+
 if __name__ == "__main__":
   main()

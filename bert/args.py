@@ -8,7 +8,7 @@ bert_model = 'bert-base-mimic-cased'
 path = Path('../data')
 workdir = path/'work_dir/bert'
 
-args = Namespace (  
+args = Namespace (
   workdir=workdir,
   dataset_csv=path/'processed_dataset.csv',
   bert_model=bert_model,
