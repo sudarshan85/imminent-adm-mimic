@@ -58,7 +58,7 @@ def read_df(df: pd.DataFrame, txt_col, label_col, set_type='train') -> List[Inpu
   """
   logger.debug(f"Reading column text column {txt_col} and label column {label_col}")
   examples = []
-  for i, row in tqdm(df.iterrows(), total=df.shape[0], desc='Reading'):
+  for i, row in df.iterrows():
     eid = f'{set_type}-{i}'
     text = row[txt_col]
     label = row[label_col]
@@ -231,8 +231,8 @@ def evaluation(eval_dataloader):
 def main():
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
-  # seeds = list(range(args.start_seed, args.start_seed + 100))
-  seeds = list(range(42, 44))
+  seeds = list(range(args.start_seed, args.start_seed + 100))
+  # seeds = list(range(42, 44))
 
   if args.gradient_accumulation_steps < 1:
     raise ValueError(f"Invalid gradient_accumulation_steps parameter: {args.gradient_accumulation_steps}, should be >= 1")
@@ -246,18 +246,18 @@ def main():
     # seed = 42
     set_global_seed(seed)
     logger.info(f"Splitting data with seed: {seed}")
-    df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)
-    # df = set_two_splits(ori_df.copy(), 'test', seed=seed)
+    # df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)
+    df = set_two_splits(ori_df.copy(), 'test', seed=seed)
 
     if args.do_train:
       train_examples = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
       train_features = convert_examples_to_features(train_examples, args.labels, args.max_seq_len, tokenizer)
       num_train_optimization_steps = int(len(train_examples) / args.bs /args.gradient_accumulation_steps) * args.n_epochs
 
-      logger.info("***** Running training *****")
-      logger.info("  Num examples = %d", len(train_examples))
-      logger.info("  Batch size = %d", args.bs)
-      logger.info("  Num steps = %d", num_train_optimization_steps)
+      logger.debug("***** Running training *****")
+      logger.debug("  Num examples = %d", len(train_examples))
+      logger.debug("  Batch size = %d", args.bs)
+      logger.debug("  Num steps = %d", num_train_optimization_steps)
 
       all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
       all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
@@ -268,14 +268,14 @@ def main():
       train_dataloader = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=args.bs, drop_last=True)
       loss = train(train_dataloader, num_train_optimization_steps)
 
-      logger.info(f"Final average loss: {loss:0.3f}")
+      logger.info(f"Training Loss: {loss:0.3f}")
 
     if args.do_eval:
       eval_examples = read_df(df.loc[(df['split'] == 'test')], 'note', 'class_label', set_type='test')
       eval_features = convert_examples_to_features(eval_examples, args.labels, args.max_seq_len, tokenizer)
-      logger.info("***** Running evaluation *****")
-      logger.info("  Num examples = %d", len(eval_examples))
-      logger.info("  Batch size = %d", args.bs)
+      logger.debug("***** Running evaluation *****")
+      logger.debug("  Num examples = %d", len(eval_examples))
+      logger.debug("  Batch size = %d", args.bs)
       all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
       all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
       all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
@@ -288,11 +288,11 @@ def main():
       eval_loss, prob, pred = evaluation(eval_dataloader)
       assert(len(prob) == len(pred) == len(all_label_ids.numpy()))
 
-      result = compute_metrics(pred, all_label_ids.numpy())
-      logger.info("***** Eval results *****")
-      logger.info(f"  Evaluation Loss: {eval_loss}")
-      for key in sorted(result.keys()):
-        logger.info(f"  {key} = {str(result[key])}")
+      # result = compute_metrics(pred, all_label_ids.numpy())
+      # logger.info("***** Eval results *****")
+      logger.info(f"Evaluation Loss: {eval_loss:0.3f}")
+      # for key in sorted(result.keys()):
+        # logger.info(f"  {key} = {str(result[key])}")
 
       model_file = args.modeldir/f'pytorch_model.bin'
       model_file.rename(args.modeldir/f'bert_seed_{seed}.pth')
