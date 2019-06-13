@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, Tenso
 
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
+from pytorch_pretrained_bert.optimization import BertAdam
 
 from args import args
 from utils.splits import set_two_splits
@@ -230,12 +230,9 @@ def evaluation(eval_dataloader):
 
 def main():
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
-  # df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
-  # df = set_two_splits(ori_df.copy(), 'test')
-
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
-  # seeds = list(range(args.start_seed, args.start_seed + 100))
-  seeds = list(range(42, 44))
+  seeds = list(range(args.start_seed, args.start_seed + 100))
+  # seeds = list(range(42, 44))
 
   if args.gradient_accumulation_steps < 1:
     raise ValueError(f"Invalid gradient_accumulation_steps parameter: {args.gradient_accumulation_steps}, should be >= 1")
@@ -249,8 +246,8 @@ def main():
     # seed = 42
     set_global_seed(seed)
     logger.info(f"Splitting data with seed: {seed}")
-    df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
-    # df = set_two_splits(ori_df.copy(), 'test')
+    # df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
+    df = set_two_splits(ori_df.copy(), 'test')
 
     if args.do_train:
       train_examples = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
@@ -300,20 +297,20 @@ def main():
       model_file = args.modeldir/f'pytorch_model.bin'
       model_file.rename(args.modeldir/f'bert_seed_{seed}.pth')
 
-      # preds.append(pred)
-      # probs.append(prob)
-      # targs.append(all_label_ids.numpy())
-      # torch.cuda.empty_cache()
+      preds.append(pred)
+      probs.append(prob)
+      targs.append(all_label_ids.numpy())
+      torch.cuda.empty_cache()
 
-  # dt = datetime.datetime.now() - t1
-  # logger.info(f"{len(seeds)} runs completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes.")
-  # preds_file = args.workdir/f'preds.pkl'
-  # logger.info(f"Writing predictions to {preds_file}.")
+  dt = datetime.datetime.now() - t1
+  logger.info(f"{len(seeds)} runs completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes.")
+  preds_file = args.workdir/f'preds.pkl'
+  logger.info(f"Writing predictions to {preds_file}.")
 
-  # with open(preds_file, 'wb') as f:
-  #   pickle.dump(targs, f)
-  #   pickle.dump(preds, f)
-  #   pickle.dump(probs, f)
+  with open(preds_file, 'wb') as f:
+    pickle.dump(targs, f)
+    pickle.dump(preds, f)
+    pickle.dump(probs, f)
         
 if __name__ == "__main__":
   main()
