@@ -178,17 +178,14 @@ def train(train_dataloader, num_train_optimization_steps):
     
     avg_epoch_loss += epoch_loss / nb_tr_steps
 
-  # Save a trained model, configuration and tokenizer    
-  # Only save the model itself
   model_to_save = model.module if hasattr(model, 'module') else model
-  torch.save(model_to_save.state_dict(), args.workdir/'pytorch_model.bin')
-  model_to_save.config.to_json_file(args.workdir/'bert_config.json')
+  torch.save(model_to_save.state_dict(), args.modeldir/'pytorch_model.bin')
 
   return avg_epoch_loss / args.n_epochs
 
 def evaluation(eval_dataloader):
   # Load a trained model and vocabulary that you have fine-tuned
-  model = BertForSequenceClassification.from_pretrained(args.workdir, num_labels=args.num_labels)
+  model = BertForSequenceClassification.from_pretrained(args.modeldir, num_labels=args.num_labels)
   model.to(args.device)
   loss_fct = nn.BCEWithLogitsLoss()
 
@@ -237,7 +234,8 @@ def main():
   # df = set_two_splits(ori_df.copy(), 'test')
 
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
-  seeds = list(range(args.start_seed, args.start_seed + 100))
+  # seeds = list(range(args.start_seed, args.start_seed + 100))
+  seeds = list(range(42, 44))
 
   if args.gradient_accumulation_steps < 1:
     raise ValueError(f"Invalid gradient_accumulation_steps parameter: {args.gradient_accumulation_steps}, should be >= 1")
@@ -248,11 +246,12 @@ def main():
   
   preds, targs, probs = [], [], []
   for seed in seeds:
+    # seed = 42
     set_global_seed(seed)
     logger.info(f"Splitting data with seed: {seed}")
     df = get_sample(set_two_splits(ori_df.copy(), name='test'), val_test='test', seed=seed)  
     # df = set_two_splits(ori_df.copy(), 'test')
- 
+
     if args.do_train:
       train_examples = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
       train_features = convert_examples_to_features(train_examples, args.labels, args.max_seq_len, tokenizer)
@@ -286,36 +285,35 @@ def main():
       all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
 
       eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+
       # Run prediction for full data
       eval_dataloader = DataLoader(eval_data, sampler=SequentialSampler(eval_data), batch_size=args.bs)
       eval_loss, prob, pred = evaluation(eval_dataloader)
       assert(len(prob) == len(pred) == len(all_label_ids.numpy()))
 
-      preds.append(pred)
-      probs.append(prob)
-      targs.append(all_label_ids.numpy())
-      torch.cuda.empty_cache()
-
-      # with open(args.workdir/'pred.pkl', 'wb') as f:
-      #   pickle.dump(all_label_ids.numpy(), f)
-      #   pickle.dump(preds, f)
-      #   pickle.dump(probs, f)
-
-      result = compute_metrics(preds, all_label_ids.numpy())
+      result = compute_metrics(pred, all_label_ids.numpy())
       logger.info("***** Eval results *****")
       logger.info(f"  Evaluation Loss: {eval_loss}")
       for key in sorted(result.keys()):
         logger.info(f"  {key} = {str(result[key])}")
 
-  dt = datetime.datetime.now() - t1
-  logger.info(f"{len(seeds)} runs completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes.")
-  preds_file = args.workdir/f'preds.pkl'
-  logger.info(f"Writing predictions to {preds_file}.")
+      model_file = args.modeldir/f'pytorch_model.bin'
+      model_file.rename(args.modeldir/f'bert_seed_{seed}.pth')
 
-  with open(preds_file, 'wb') as f:
-    pickle.dump(targs, f)
-    pickle.dump(preds, f)
-    pickle.dump(probs, f)
+      # preds.append(pred)
+      # probs.append(prob)
+      # targs.append(all_label_ids.numpy())
+      # torch.cuda.empty_cache()
+
+  # dt = datetime.datetime.now() - t1
+  # logger.info(f"{len(seeds)} runs completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes.")
+  # preds_file = args.workdir/f'preds.pkl'
+  # logger.info(f"Writing predictions to {preds_file}.")
+
+  # with open(preds_file, 'wb') as f:
+  #   pickle.dump(targs, f)
+  #   pickle.dump(preds, f)
+  #   pickle.dump(probs, f)
         
 if __name__ == "__main__":
   main()
