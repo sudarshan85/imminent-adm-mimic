@@ -231,7 +231,7 @@ def evaluation(eval_dataloader):
 def main():
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
-  seeds = list(range(args.start_seed, args.start_seed + 100))
+  seeds = list(range(args.start_seed + 97, args.start_seed + 100))
   # seeds = list(range(42, 44))
 
   if args.gradient_accumulation_steps < 1:
