@@ -13,7 +13,7 @@ sys.path.append('../')
 
 from dataclasses import dataclass
 from typing import List, Union, Tuple, Optional
-from tqdm import tqdm, trange
+from tqdm import tqdm
 from sklearn.metrics import recall_score, roc_auc_score, precision_score
 
 from torch import nn
@@ -135,7 +135,7 @@ def set_global_seed(seed=None):
   if args.n_gpu > 0:
     torch.cuda.manual_seed_all(seed)
 
-def train(train_dataloader, num_train_optimization_steps):
+def train(train_dataloader, num_train_optimization_steps, args):
 
   # Prepare model
   model = BertForSequenceClassification.from_pretrained(args.bert_dir, num_labels=args.num_labels)
@@ -154,7 +154,7 @@ def train(train_dataloader, num_train_optimization_steps):
   loss_fct = nn.BCEWithLogitsLoss()
   avg_epoch_loss = 0
   model.train()
-  for _ in trange(int(args.n_epochs), desc="Epoch"):
+  for _ in tqdm(range(int(args.n_epochs)), desc="Epoch"):
     epoch_loss = 0
     nb_tr_steps = 0
     for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
@@ -183,7 +183,7 @@ def train(train_dataloader, num_train_optimization_steps):
 
   return avg_epoch_loss / args.n_epochs
 
-def evaluation(eval_dataloader):
+def evaluation(eval_dataloader, args):
   # Load a trained model and vocabulary that you have fine-tuned
   model = BertForSequenceClassification.from_pretrained(args.modeldir, num_labels=args.num_labels)
   model.to(args.device)
@@ -266,7 +266,7 @@ def main():
 
       train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
       train_dataloader = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=args.bs, drop_last=True)
-      loss = train(train_dataloader, num_train_optimization_steps)
+      loss = train(train_dataloader, num_train_optimization_steps, args)
 
       logger.info(f"Training Loss: {loss:0.3f}")
 
@@ -285,7 +285,7 @@ def main():
 
       # Run prediction for full data
       eval_dataloader = DataLoader(eval_data, sampler=SequentialSampler(eval_data), batch_size=args.bs)
-      eval_loss, prob, pred = evaluation(eval_dataloader)
+      eval_loss, prob, pred = evaluation(eval_dataloader, args)
       assert(len(prob) == len(pred) == len(all_label_ids.numpy()))
 
       # result = compute_metrics(pred, all_label_ids.numpy())
