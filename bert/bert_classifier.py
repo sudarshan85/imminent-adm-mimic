@@ -13,7 +13,7 @@ sys.path.append('../')
 
 from dataclasses import dataclass
 from typing import List, Union, Tuple, Optional
-from tqdm import tqdm
+from tqdm import tqdm_notebook as tqdm
 from sklearn.metrics import recall_score, roc_auc_score, precision_score
 
 from torch import nn
@@ -77,7 +77,7 @@ def get_sample(df: pd.DataFrame, sample_pct: float=0.01, val_test: Optional[str]
 
   return train
 
-def convert_examples_to_features(examples: List[InputExample], label_list: List[Union[int, str]], max_seq_len: int, tokenizer: BertTokenizer, is_pred=False) -> List[InputFeatures]:
+def convert_examples_to_features(examples: List[InputExample], max_seq_len: int, tokenizer: BertTokenizer, is_pred=False) -> List[InputFeatures]:
   """
     Loads a data file into a list
   """
@@ -231,7 +231,7 @@ def evaluation(eval_dataloader, args):
 def main():
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
-  seeds = list(range(args.start_seed + 97, args.start_seed + 100))
+  seeds = list(range(args.start_seed, args.start_seed + 100))
   # seeds = list(range(42, 44))
 
   if args.gradient_accumulation_steps < 1:
@@ -251,7 +251,7 @@ def main():
 
     if args.do_train:
       train_examples = read_df(df.loc[(df['split'] == 'train')], 'note', 'class_label')
-      train_features = convert_examples_to_features(train_examples, args.labels, args.max_seq_len, tokenizer)
+      train_features = convert_examples_to_features(train_examples, args.max_seq_len, tokenizer)
       num_train_optimization_steps = int(len(train_examples) / args.bs /args.gradient_accumulation_steps) * args.n_epochs
 
       logger.debug("***** Running training *****")
@@ -272,7 +272,7 @@ def main():
 
     if args.do_eval:
       eval_examples = read_df(df.loc[(df['split'] == 'test')], 'note', 'class_label', set_type='test')
-      eval_features = convert_examples_to_features(eval_examples, args.labels, args.max_seq_len, tokenizer)
+      eval_features = convert_examples_to_features(eval_examples, args.max_seq_len, tokenizer)
       logger.debug("***** Running evaluation *****")
       logger.debug("  Num examples = %d", len(eval_examples))
       logger.debug("  Batch size = %d", args.bs)
