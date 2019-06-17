@@ -17,7 +17,7 @@ args = Namespace (
   max_seq_len=256,
   do_lower_case=False,
   bs=32,
-  device='cuda:0',
+  device='cuda:3',
   start_seed=127,
   cols=['class_label', 'note'],
   lr=5e-5,
@@ -31,5 +31,5 @@ args = Namespace (
   bc_threshold=0.3,
   num_labels=1,
   labels=[0, 1],
-  n_gpu=torch.cuda.device_count(),
+  n_gpu=1,
 )
