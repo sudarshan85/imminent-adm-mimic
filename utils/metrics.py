@@ -99,29 +99,52 @@ class BinaryAvgMetrics(object):
 
     return np.round(auroc.mean(), self.decimal)
 
-  def get_avg_metrics(self, conf=None):
+  def get_avg_metrics(self, conf=None, defn=False):
+    definitions = {
+      'sensitivity': "When it's ACTUALLY YES, how often does it PREDICT YES?",
+      'specificity': "When it's ACTUALLY NO, how often does it PREDICT NO?",
+      'ppv': "When it PREDICTS YES, how often is it correct?",
+      'auroc': "Indicates how well the model is capable of distinguishing between classes",
+      'npv': "When it PREDICTS NO, how often is it correct?",
+      'f1': "Harmonic mean of sensitivity and ppv",
+    }
     if conf is None:
-      d = {
-        'sensitivity': [self.sensitivity_avg(), "When it's ACTUALLY YES, how often does it PREDICT YES?"],
-        'specificity': [self.specificity_avg(), "When it's ACTUALLY NO, how often does it PREDICT NO?"],
-        'ppv': [self.ppv_avg(), "When it PREDICTS YES, how often is it correct?"],
-        'auroc': [self.auroc_avg(), "Indicates how well the model is capable of distinguishing between classes"],
-        'npv': [self.npv_avg(), "When it PREDICTS NO, how often is it correct?"],
-        'f1': [self.f1_avg(), "Harmonic mean of sensitivity and ppv"],
-      }
-    
-      return pd.DataFrame(d.values(), index=d.keys(), columns=['Value', 'Definition'])
-    else:
-      d = {
-        'sensitivity': [*self.sensitivity_avg(conf), "When it's ACTUALLY YES, how often does it PREDICT YES?"],
-        'specificity': [*self.specificity_avg(conf), "When it's ACTUALLY NO, how often does it PREDICT NO?"],
-        'ppv': [*self.ppv_avg(conf), "When it PREDICTS YES, how often is it correct?"],
-        'auroc': [*self.auroc_avg(conf), "Indicates how well the model is capable of distinguishing between classes"],   
-        'npv': [*self.npv_avg(conf), "When it PREDICTS NO, how often is it correct?"],
-        'f1': [*self.f1_avg(conf), "Harmonic mean of sensitivity and ppv"],        
+      metrics = {
+        'sensitivity': [self.sensitivity_avg() * 100],
+        'specificity': [self.specificity_avg() * 100],
+        'ppv': [self.ppv_avg() * 100],
+        'auroc': [self.auroc_avg() * 100],
+        'npv': [self.npv_avg() * 100],
+        'f1': [self.f1_avg() * 100],
       }
 
-      return pd.DataFrame(d.values(), index=d.keys(), columns=['Lower', 'Mean', 'Upper', 'Definition'])
+      if defn:
+        for metric, value in metrics.items():
+          value.append(definitions[metric])
+        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Value', 'Definition'])
+      else:
+        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Value'])
+
+      return d
+
+    else:
+      metrics = {
+        'sensitivity': [*[value * 100 for value in self.sensitivity_avg(conf)]],        
+        'specificity': [*[value * 100 for value in self.specificity_avg(conf)]],
+        'ppv': [*[value * 100 for value in self.ppv_avg(conf)]],
+        'auroc': [*[value * 100 for value in self.auroc_avg(conf)]],   
+        'npv': [*[value * 100 for value in self.npv_avg(conf)]],
+        'f1': [*[value * 100 for value in self.f1_avg(conf)]],        
+      }
+
+      if defn:
+        for metric, value in metrics.items():
+          value.append(definitions[metric])
+        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Lower', 'Mean', 'Upper', 'Definition'])
+      else:
+        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Lower', 'Mean', 'Upper'])
+
+      return d
   
   def __repr__(self):
     s = f"Number of Runs: {self.n_runs}\n"
