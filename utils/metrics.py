@@ -51,6 +51,7 @@ class BinaryAvgMetrics(object):
   def cm_avg(self):
     return np.ceil(np.array([[self.tns.mean(), self.fps.mean()], [self.fns.mean(), self.tps.mean()]])).astype(np.int64)
   
+  @property
   def prevalence_avg(self):
     return np.round(((self.fns + self.tps) / (self.tns + self.fps + self.fns + self.tps)).mean(), self.decimal)
   
@@ -82,35 +83,45 @@ class BinaryAvgMetrics(object):
 
     return np.round(npv.mean(), self.decimal)
   
-  @property
-  def f1_avg(self):
-    return np.round(((2 * self.ppv_avg() * self.sensitivity_avg()) / (self.ppv_avg() + self.sensitivity_avg())).mean(), self.decimal)
+  def f1_avg(self, conf=None):
+    se = (self.tps / (self.tps + self.fns))
+    ppv = (self.tps / (self.tps + self.fps))
+    f1 = (2 * se * ppv) / (se + ppv)
+    if conf is not None:
+      return _mean_confidence_interval(f1, conf)
 
-  @property
-  def auroc_avg(self):
-    return np.round(np.mean([roc_auc_score(targ, prob) for targ, prob in zip(self.targs, self.probs)]), self.decimal)
-  
+    return np.round(f1.mean(), self.decimal)
+
+  def auroc_avg(self, conf=None):
+    auroc = np.array([roc_auc_score(targ, prob) for targ, prob in zip(self.targs, self.probs)])
+    if conf is not None:
+      return _mean_confidence_interval(auroc, conf)
+
+    return np.round(auroc.mean(), self.decimal)
+
   def get_avg_metrics(self, conf=None):
     if conf is None:
       d = {
         'sensitivity': [self.sensitivity_avg(), "When it's ACTUALLY YES, how often does it PREDICT YES?"],
         'specificity': [self.specificity_avg(), "When it's ACTUALLY NO, how often does it PREDICT NO?"],
         'ppv': [self.ppv_avg(), "When it PREDICTS YES, how often is it correct?"],
-        'auroc': [self.auroc_avg, "Indicates how well the model is capable of distinguishing between classes"],
+        'auroc': [self.auroc_avg(), "Indicates how well the model is capable of distinguishing between classes"],
         'npv': [self.npv_avg(), "When it PREDICTS NO, how often is it correct?"],
-        'f1': [self.f1_avg, "Harmonic mean of sensitivity and ppv"],
+        'f1': [self.f1_avg(), "Harmonic mean of sensitivity and ppv"],
       }
     
       return pd.DataFrame(d.values(), index=d.keys(), columns=['Value', 'Definition'])
     else:
       d = {
-        'sensitivity': [*self.sensitivity_avg(conf), conf, "When it's ACTUALLY YES, how often does it PREDICT YES?"],
-        'specificity': [*self.specificity_avg(conf), conf, "When it's ACTUALLY NO, how often does it PREDICT NO?"],
-        'ppv': [*self.ppv_avg(conf), conf, "When it PREDICTS YES, how often is it correct?"],
-        'npv': [*self.npv_avg(conf), conf, "When it PREDICTS NO, how often is it correct?"],
+        'sensitivity': [*self.sensitivity_avg(conf), "When it's ACTUALLY YES, how often does it PREDICT YES?"],
+        'specificity': [*self.specificity_avg(conf), "When it's ACTUALLY NO, how often does it PREDICT NO?"],
+        'ppv': [*self.ppv_avg(conf), "When it PREDICTS YES, how often is it correct?"],
+        'auroc': [*self.auroc_avg(conf), "Indicates how well the model is capable of distinguishing between classes"],   
+        'npv': [*self.npv_avg(conf), "When it PREDICTS NO, how often is it correct?"],
+        'f1': [*self.f1_avg(conf), "Harmonic mean of sensitivity and ppv"],        
       }
 
-      return pd.DataFrame(d.values(), index=d.keys(), columns=['Lower', 'Mean', 'Upper', 'Confidence', 'Definition'])
+      return pd.DataFrame(d.values(), index=d.keys(), columns=['Lower', 'Mean', 'Upper', 'Definition'])
   
   def __repr__(self):
     s = f"Number of Runs: {self.n_runs}\n"
