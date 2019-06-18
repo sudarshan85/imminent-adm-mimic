@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -25,9 +26,23 @@ def print_top_words(feature_names: List[str], probs: np.ndarray, N: int):
   for feat in neg:
     print(np.round(feat[0], 2), feat[1])
 
-def plot_prob(ax, df, threshold, cutoff=20, interval=12, granularity=5, is_agg=False, is_log=False):
-  plot_data = df.loc[(df['relative_charttime']) > pd.to_timedelta(-cutoff, unit='d')][['relative_charttime', 'prob']].copy()
-  plot_data['interval'] = (plot_data['relative_charttime'].apply(lambda curr_time: int((curr_time - df['relative_charttime'].max())/pd.to_timedelta(interval, unit='h'))))
+def plot_prob(ax, df, threshold, starting_day, ending_day, interval_hours, is_agg=False, is_log=False):
+  if starting_day > 0:
+    warnings.warn(f"starting_day ({starting_day}) must be negative. Converting it to negative")
+    starting_day = -starting_day
+
+  if ending_day > 0:
+    warnings.warn(f"ending_day ({ending_day}) must be negative. Converting it to negative")
+    ending_day = -ending_day
+
+  if ending_day < starting_day:
+    warnings.warn(f"starting_day ({starting_day}) must be less than ending_day ({ending_day}). Swapping values.")
+    starting_day, ending_day = ending_day, starting_day
+
+  high = pd.to_timedelta(ending_day, unit='d')
+  low = pd.to_timedelta(starting_day, unit='d')
+  plot_data = df.loc[(df['relative_charttime'] > low) & (df['relative_charttime'] < high)][['relative_charttime', 'prob']].copy()
+  plot_data['interval'] = ((plot_data['relative_charttime'].apply(lambda curr_time: int((curr_time - df['relative_charttime'].max())/pd.to_timedelta(interval_hours, unit='h')))))/2
 
   if is_agg:
     plot_data = plot_data[['interval', 'prob']].groupby(['interval']).agg(lambda x: np.average(x, weights=plot_data.loc[x.index, 'prob']))
@@ -38,10 +53,10 @@ def plot_prob(ax, df, threshold, cutoff=20, interval=12, granularity=5, is_agg=F
 
   ax.axhline(y=threshold, label=f'Threshold = {threshold}', linestyle='--', color='r')
   sns.lineplot(x='interval', y='prob', data=plot_data, ax=ax)
-  ax.set_xlabel(f'Time to ICU\n Notes charttime interval of {interval} hours')
+  ax.set_xlabel(f'Time to ICU (days)')
   ax.set_ylabel('Probability')
-  ax.set_title("Probability of Imminent Threat as a function of Note Charttime")
-  ax.xaxis.set_major_locator(ticker.MultipleLocator(granularity))
+  ax.set_title("Probability of Imminent ICU visit")
+  ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
 
 def plot_confusion_matrix(ax, cm, classes, normalize=False, title=None, cmap=plt.cm.Blues):
   """
