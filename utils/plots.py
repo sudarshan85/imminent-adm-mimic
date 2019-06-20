@@ -55,7 +55,8 @@ def plot_prob(ax, df, threshold, starting_day, ending_day, interval_hours, is_ag
   sns.lineplot(x='interval', y='prob', data=plot_data, ax=ax)
   ax.set_xlabel(f'Time to ICU (days)')
   ax.set_ylabel('Probability')
-  ax.set_title("Probability of Imminent ICU visit")
+  ax.legend(loc='upper left')
+  # ax.set_title("Probability of Imminent ICU visit")
   ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
 
 def plot_confusion_matrix(ax, cm, classes, normalize=False, title=None, cmap=plt.cm.Blues):

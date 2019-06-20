@@ -231,7 +231,7 @@ def evaluation(eval_dataloader, args):
 def main():
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
   logger.info(f"device: {args.device} n_gpu: {args.n_gpu}")
-  seeds = list(range(args.start_seed + 25, args.start_seed + 50))
+  seeds = list(range(args.start_seed + 50, args.start_seed + 100))
   # seeds = list(range(42, 43))
 
   if args.gradient_accumulation_steps < 1:
@@ -303,7 +303,7 @@ def main():
       torch.cuda.empty_cache()
 
   dt = datetime.datetime.now() - t1
-  logger.info(f"{len(seeds)} runs completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes.")
+  logger.info(f"{len(seeds)} runs completed. Took {dt.days} days {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes.")
   preds_file = args.workdir/f'preds.pkl'
   logger.info(f"Writing predictions to {preds_file}.")
 
