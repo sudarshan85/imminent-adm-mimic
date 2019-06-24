@@ -89,7 +89,7 @@ def plot_roc(ax, y_true, prob):
   fpr, tpr, _ = roc_curve(y_true, prob)
   ax.set_xlabel("False Positive Rate")
   ax.set_ylabel("Recall")
-  ax.set_title("Receiver Operation Characteristics Curve")
+  # ax.set_title("Receiver Operation Characteristics Curve")
   ax.plot([0, 1], [0, 1], linestyle='--')
   ax.plot(fpr, tpr, marker='.')
 
@@ -118,7 +118,7 @@ def plot_mean_roc(ax, y_trues, probs):
   ax.plot([0, 1], [0, 1],'r--')
   ax.set_ylabel("True Positive Rate")
   ax.set_xlabel("False Positive Rate")
-  ax.set_title("Mean ROC Curve ")
+  # ax.set_title("Mean ROC Curve ")
 
 def plot_auprc(ax, y_true, probs):
   ap = average_precision_score(y_true, probs)
@@ -127,7 +127,7 @@ def plot_auprc(ax, y_true, probs):
 
   ax.set_xlabel("Recall")
   ax.set_ylabel("Precision")
-  ax.set_title("Precision-Recall Curve")
+  # ax.set_title("Precision-Recall Curve")
   ax.plot([0, 1], [0.5, 0.5], linestyle='--')
   ax.plot(recall, precision, marker='.')
 
