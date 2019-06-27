@@ -3,6 +3,7 @@
 import warnings
 import numpy as np
 import pandas as pd
+import re
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import seaborn as sns
@@ -10,30 +11,25 @@ import seaborn as sns
 from typing import List
 from scipy import interp
 from wordcloud import WordCloud
+from spacy.lang.en.stop_words import STOP_WORDS
 from sklearn.metrics import roc_auc_score, roc_curve, auc, confusion_matrix
 from sklearn.metrics import average_precision_score, precision_recall_curve
 
 def get_wordcloud(feature_names, scores, n_words='all'):
-
-  def is_number(s):
-    try:
-      float(s)
-      return True
-    except ValueError:
-      return False
-    
   if n_words == 'all':
     n_words = len(feature_names)
-    
+
+  p = re.compile('^[a-z\s]+$')
   neg_dict, pos_dict = {}, {}
   for word, score in zip(feature_names, scores):
     word = word.lower()
-    if is_number(word):
-      continue
     if len(word) < 2:
       continue
-    neg_dict[word] = 1 - score
-    pos_dict[word] = score
+    if word in STOP_WORDS:
+      continue
+    if p.match(word):      
+      neg_dict[word] = 1 - score
+      pos_dict[word] = score
     
   neg_cloud = WordCloud(background_color='white', max_words=n_words, max_font_size=40, relative_scaling=0.5).generate_from_frequencies(neg_dict)
   pos_cloud = WordCloud(background_color='white', max_words=n_words, max_font_size=40, relative_scaling=0.5).generate_from_frequencies(pos_dict)  
