@@ -4,15 +4,17 @@ from argparse import Namespace
 from pathlib import Path
 
 path = Path('../data')
-workdir=path/'work_dir/lr'
+workdir=path/'workdir/lr'
 
 args = Namespace(
   path=path,
   workdir=workdir,
-  dataset_csv=path/'processed_dataset.csv',
-  cols=['class_label', 'scispacy_note'],
+  dataset_csv=path/'mimic_icu_pred_proc_dataset.csv',
+  cols=['imminent_label', 'discharge_label', 'scispacy_note'],
   modeldir=workdir/'models',
   min_freq=3,
-  bc_threshold=0.47,
+  imminent_threshold=0.47,
+  discharge_threshold=0.48,
   start_seed=127,
   )
+
