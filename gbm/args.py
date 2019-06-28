@@ -13,7 +13,7 @@ args = Namespace(
   cols=['imminent_label', 'discharge_label', 'scispacy_note'],
   modeldir=workdir/'models',
   min_freq=3,
-  imminent_threshold=0.33,
-  discharge_threshold=0.37,
+  imminent_threshold=0.3,
+  discharge_threshold=0.39,
   start_seed=127,
   )
