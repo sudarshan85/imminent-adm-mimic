@@ -4,18 +4,21 @@ from argparse import Namespace
 from pathlib import Path
 
 path = Path('../data')
-workdir=path/'work_dir'
+figdir=path/'workdir/figures'
 
 args = Namespace(
   path=path,
-  workdir=workdir,
-  dataset_csv=path/'full_processed_dataset.csv',
-  min_freq=3,
-  bc_threshold={
+  figdir=figdir,
+  raw_csv=path/'mimic_icu_pred_raw_dataset.csv',
+  proc_csv=path/'mimic_icu_pred_proc_dataset.csv',
+  imminent_threshold={
     'lr': 0.47,
     'rf': 0.32,
-    'cnn': 0.23,
     'gbm': 0.3,
-    # 'bert': 0.3,
     },
-  )
+  discharge_threshold={
+    'lr': 0.48,
+    'rf': 0.37,
+    'gbm': 0.39,
+    },
+)
