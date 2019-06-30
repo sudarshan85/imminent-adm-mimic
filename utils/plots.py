@@ -77,7 +77,6 @@ def plot_prob(ax, df, threshold, starting_day, ending_day, interval_hours, is_ag
   ax.set_xlabel(f'Time to ICU (days)')
   ax.set_ylabel('Probability')
   ax.legend(loc='upper left')
-  # ax.set_title("Probability of Imminent ICU visit")
   ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
 
 def plot_confusion_matrix(ax, cm, classes, normalize=False, title=None, cmap=plt.cm.Blues):
