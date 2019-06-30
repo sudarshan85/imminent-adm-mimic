@@ -28,6 +28,7 @@ class ModelContainer:
 @dataclass
 class DataContainer:
   df_with_splits: pd.DataFrame
+  label_col: str
   dataset_class: Any
   workdir: Path
   create_vec: bool = True
@@ -40,7 +41,7 @@ class DataContainer:
     self._extract_from_splits()
     self._create_datasets()
     self._create_loaders()
-    n_classes = self.df_with_splits['class_label'].nunique()
+    n_classes = self.df_with_splits[self.label_col].nunique()
     self.n_classes = n_classes if n_classes > 2 else n_classes-1
 
   def _extract_from_splits(self):
@@ -64,26 +65,26 @@ class DataContainer:
   def _create_datasets(self):
     if self.create_vec:
       logger.info("Creating vectorizer...")
-      self.train_ds = self.dataset_class.load_data_and_create_vectorizer(self.train_df, self.min_freq)
+      self.train_ds = self.dataset_class.load_data_and_create_vectorizer(self.train_df, self.label_col, self.min_freq)
       self._vectorizer = self.train_ds.vectorizer
     else:
       try:
-        self.train_ds = self.dataset_class.load_data_and_vectorizer_from_file(self.train_df, self.workdir)
+        self.train_ds = self.dataset_class.load_data_and_vectorizer_from_file(self.train_df, self.label_col, self.workdir)
         self._vectorizer = self.train_ds.vectorizer
       except FileNotFoundError:
         logger.info("Creating and saving vectorizer...")
-        self.train_ds = self.dataset_class.load_data_and_create_vectorizer(self.train_df, self.min_freq)
+        self.train_ds = self.dataset_class.load_data_and_create_vectorizer(self.train_df, self.label_col, self.min_freq)
         self.train_ds.save_vectorizer(self.workdir)
         self._vectorizer = self.train_ds.vectorizer
         logger.info("Finished!")
 
-      self.train_ds = self.dataset_class.load_data_and_vectorizer_from_file(self.train_df, self.workdir)
+      self.train_ds = self.dataset_class.load_data_and_vectorizer_from_file(self.train_df, self.label_col,  self.workdir)
       self._vectorizer = self.train_ds.vectorizer
 
-    self.val_ds = self.dataset_class.load_data_and_vectorizer(self.val_df, self._vectorizer)
+    self.val_ds = self.dataset_class.load_data_and_vectorizer(self.val_df, self.label_col, self._vectorizer)
 
     if self.with_test:
-      self.test_ds = self.dataset_class.load_data_and_vectorizer(self.test_df, self._vectorizer)
+      self.test_ds = self.dataset_class.load_data_and_vectorizer(self.test_df, self.label_col, self._vectorizer)
 
   def _create_loaders(self):
     if self.weighted_sampling:

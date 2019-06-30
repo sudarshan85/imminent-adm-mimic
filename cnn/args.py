@@ -6,7 +6,7 @@ from pathlib import Path
 path = Path('../data')
 glove_path = Path('../pretrained/glove')
 fasttext_path = Path('../pretrained/fasttext')
-work_dir = Path('../data/work_dir/cnn')
+workdir = Path('../data/workdir/cnn')
 
 # all pretrained embedding paths
 glove_50 = glove_path/'glove.6B.50d.txt'
@@ -22,8 +22,9 @@ ft_crawl = fasttext_path/'crawl-300d-2M.txt'
 ft_mimic = fasttext_path/'mimic-300d.txt'
 
 args = Namespace(
-  workdir=work_dir,
-  dataset_csv=Path('../data/processed_dataset.csv'),
+  workdir=workdir,
+  modeldir=workdir/'models',  
+  dataset_csv=path/'mimic_icu_pred_proc_dataset.csv',
   batch_size=128,
   min_freq=3,
   hidden_dim=100,
@@ -32,16 +33,19 @@ args = Namespace(
   n_channels=100,
   lr=1e-3,
   wd=0.,
-  n_epochs=15,
+  n_epochs=10,
   checkpointer_save_total=1,
   emb_path=glove_50,
   emb_sz=50,
   checkpointer_prefix='glove50_cnn',
-  device='cuda:2',
+  device='cuda:3',
   checkpointer_name='epoch',
   checkpointer_save_every=5,
   early_stop_patience=10,
-  bc_threshold=0.23,
-  cols=['class_label', 'scispacy_note'],
+  imminent_threshold=0.2,
+  discharge_threshold=0.5,
+  cols=['imminent_label', 'discharge_label', 'scispacy_note'],
+  full_run_cols=['imminent_label', 'discharge_label', 'scispacy_note', 'charttime', 'intime'],
+  dates=['charttime', 'intime'],
   start_seed=127,
 )
