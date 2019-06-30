@@ -23,14 +23,11 @@ def get_wordcloud(feature_names, scores, n_words='all'):
   neg_dict, pos_dict = {}, {}
   for word, score in zip(feature_names, scores):
     word = word.lower()
-    if len(word) < 2:
-      continue
-    if word in STOP_WORDS:
-      continue
-    if p.match(word):      
-      neg_dict[word] = 1 - score
-      pos_dict[word] = score
-    
+    if len(word) > 7 and word not in STOP_WORDS:
+      if p.match(word):      
+        neg_dict[word] = 1 - score
+        pos_dict[word] = score
+
   neg_cloud = WordCloud(background_color='white', max_words=n_words, max_font_size=40, relative_scaling=0.5).generate_from_frequencies(neg_dict)
   pos_cloud = WordCloud(background_color='white', max_words=n_words, max_font_size=40, relative_scaling=0.5).generate_from_frequencies(pos_dict)  
     
@@ -64,7 +61,7 @@ def plot_prob(ax, df, threshold, starting_day, ending_day, interval_hours, is_ag
     starting_day, ending_day = ending_day, starting_day
 
   high = pd.to_timedelta(ending_day, unit='d')
-  low = pd.to_timedelta(starting_day, unit='d')
+  low = pd.to_timedelta(starting_day, unit='d')  
   plot_data = df.loc[(df['relative_charttime'] > low) & (df['relative_charttime'] < high)][['relative_charttime', 'prob']].copy()
   plot_data['interval'] = ((plot_data['relative_charttime'].apply(lambda curr_time: int((curr_time - df['relative_charttime'].max())/pd.to_timedelta(interval_hours, unit='h')))))/2
 
