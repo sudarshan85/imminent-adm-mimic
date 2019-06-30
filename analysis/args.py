@@ -4,11 +4,11 @@ from argparse import Namespace
 from pathlib import Path
 
 path = Path('../data')
-figdir=path/'workdir/figures'
 
 args = Namespace(
   path=path,
-  figdir=figdir,
+  workdir=path/'workdir',
+  figdir=path/'workdir/figdir',
   raw_csv=path/'mimic_icu_pred_raw_dataset.csv',
   proc_csv=path/'mimic_icu_pred_proc_dataset.csv',
   imminent_threshold={

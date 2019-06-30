@@ -136,8 +136,8 @@ def plot_mean_roc(ax, y_trues, probs):
   ax.fill_between(base_fpr, tprs_lower, tprs_upper, color='grey', alpha=0.3)
 
   ax.plot([0, 1], [0, 1],'r--')
-  ax.set_ylabel("True Positive Rate")
-  ax.set_xlabel("False Positive Rate")
+  # ax.set_ylabel("True Positive Rate")
+  # ax.set_xlabel("False Positive Rate")
   # ax.set_title("Mean ROC Curve ")
 
 def plot_auprc(ax, y_true, probs):
