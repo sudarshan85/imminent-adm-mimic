@@ -11,6 +11,8 @@ args = Namespace(
   figdir=path/'workdir/figdir',
   raw_csv=path/'mimic_icu_pred_raw_dataset.csv',
   proc_csv=path/'mimic_icu_pred_proc_dataset.csv',
+  cols=['imminent_label', 'discharge_label', 'scispacy_note', 'charttime', 'intime'],
+  dates=['charttime', 'intime'],
   imminent_threshold={
     'lr': 0.47,
     'rf': 0.32,
