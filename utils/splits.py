@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
+import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 def test(a,b,cmp,cname=None):
   if cname is None: cname=cmp.__name__
   assert cmp(a,b),f"{cname}:\n{a}\n{b}"
 
-def near(a,b): return np.allclose(a, b, rtol=1e-3, atol=1e-5)
+def near(a,b): return np.allclose(a, b, rtol=1e-1, atol=1e-1)
 def test_near(a,b): test(a,b,near)
 
 def set_all_splits(df, val_pct, test_pct=0.0, seed=None):
@@ -67,5 +68,39 @@ def set_bool_split(df, pct=0.15, seed=None):
 
   test_near(round(len(df[df['is_valid'] == False])/len(df), 2), 1-pct)
   test_near(round(len(df[df['is_valid'] == True])/len(df), 2), pct)
+
+  return df
+
+def set_group_splits(df, group_col, pct=0.15, seed=None):
+  df['split'] = 'train'
+  train_idxs, test_idxs = next(GroupShuffleSplit(test_size=pct, n_splits=2, random_state=seed).split(df, groups=df[group_col]))
+  df.loc[test_idxs, 'split'] = 'test'
+
+  assert(set(df.loc[(df['split'] == 'train')][group_col].unique().tolist()).intersection(df[(df['split'] == 'test')][group_col].unique().tolist()) == set())
+  test_near(len(df.loc[(df['split'] == 'train')])/len(df), 1-pct)
+  test_near(len(df.loc[(df['split'] == 'test')])/len(df), pct)
+
+  return df  
+
+def set_group_all_splits(df, group_col, val_pct, test_pct, seed=None):
+  new_test_pct = np.around(test_pct / (val_pct + test_pct), 2)
+  train_pct = 1 - (val_pct + test_pct)
+  split_df = set_group_splits(df, group_col, (val_pct + test_pct), seed=seed)
+  train_df = split_df.loc[(split_df['split'] == 'train')].reset_index()
+  inter_df = split_df.loc[(split_df['split'] == 'test')].reset_index()
+  split_df = set_group_splits(inter_df, group_col, new_test_pct, seed=seed)
+  val_df = split_df.loc[(split_df['split'] == 'train')].reset_index()
+  val_df['split'] = 'val'
+  test_df = split_df.loc[(split_df['split'] == 'test')].reset_index()
+  
+  df = pd.concat([train_df, val_df, test_df], axis=0, sort=False)
+  
+  assert(set(df.loc[(df['split'] == 'train')][group_col].unique().tolist()).intersection(df[(df['split'] == 'val')][group_col].unique().tolist()) == set())
+  assert(set(df.loc[(df['split'] == 'train')][group_col].unique().tolist()).intersection(df[(df['split'] == 'test')][group_col].unique().tolist()) == set())
+  assert(set(df.loc[(df['split'] == 'val')][group_col].unique().tolist()).intersection(df[(df['split'] == 'test')][group_col].unique().tolist()) == set())
+
+  test_near(round(len(df[df['split'] == 'train'])/len(df), 2), 1-(val_pct+test_pct))
+  test_near(round(len(df[df['split'] == 'val'])/len(df), 2), val_pct)
+  test_near(round(len(df[df['split'] == 'test'])/len(df), 2), test_pct)
 
   return df
