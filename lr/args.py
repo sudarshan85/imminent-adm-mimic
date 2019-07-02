@@ -17,7 +17,7 @@ args = Namespace(
   modeldir=workdir/'models',
   min_freq=3,
   imminent_threshold=0.48,
-  discharge_threshold=0.48,
+  discharge_threshold=0.45,
   start_seed=127,
   )
 
