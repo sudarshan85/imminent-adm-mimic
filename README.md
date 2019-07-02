@@ -1,5 +1,5 @@
 # Predicting early (imminent) ICU admission and Prolonged Stay using Clinical Notes
-This repository contains code for creating different machine learning models to predict imminent ICU admission and prolong stay at the ICU using clinical notes only. The notes are part of the MIMIC-III database. The SQL script for extracting the data from the database can be found here.
+This repository contains code for creating different machine learning models to predict imminent ICU admission and prolong stay at the ICU using clinical notes only. The notes are part of the MIMIC-III database. The SQL script for extracting the data from the database can be found ]here](https://github.com/sudarshan85/mimic_extraction/tree/master/imminent-adm-prolonged-stay-with-notes).
 
 Our procedure for building the model is as follows:
 1. Extract the notes from the database with relevant conditions as detailed in the SQL script
