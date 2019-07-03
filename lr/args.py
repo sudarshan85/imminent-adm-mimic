@@ -21,3 +21,19 @@ args = Namespace(
   start_seed=127,
   )
 
+ia_params = {
+  'class_weight': 'balanced',
+  'solver': 'liblinear',
+  'multi_class': 'ovr',
+  'dual': True,
+  'C': 0.336
+}  
+
+ps_params = {
+  'class_weight': 'balanced',
+  'solver': 'liblinear',
+  'multi_class': 'ovr',
+  'dual': True,
+  'C': 0.145
+}
+

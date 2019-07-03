@@ -6,6 +6,9 @@ import sys
 import json
 import warnings
 
+sys.path.append('../')
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import pandas as pd
 import numpy as np
 
@@ -23,19 +26,23 @@ sh = logging.StreamHandler()
 sh.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(sh)
 
-task = 'ia'
-
 if __name__ == '__main__':
-  seed = 42
+  if len(sys.argv) != 2:
+    logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
+    sys.exit(1)
+
+  task = sys.argv[1]
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
   if task == 'ia':
+    logger.info(f"Running hyperparameter search for Imminent Admission Prediction task")
     task_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
     label = 'imminent_adm_label'
   if task == 'ps':
-    tasl_df = ori_df[args.prolonged_stay_cols].copy()
+    logger.info(f"Running hyperparameter search for Prolonged Stay Prediction task ")
+    task_df = ori_df[args.prolonged_stay_cols].copy()
     label = 'prolonged_stay_label'
 
-  df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
+  df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=42)
   vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, sublinear_tf=True, ngram_range=(2,2))
 
   x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
@@ -43,13 +50,12 @@ if __name__ == '__main__':
   y_train = df.loc[(df['split'] == 'train')][label].to_numpy()
   y_test = df.loc[(df['split'] == 'test')][label].to_numpy()
 
-  params = {
-    'class_weight': 'balanced',
+  clf_params = {
     'solver': 'liblinear',
     'multi_class': 'ovr',
   }
 
-  clf = LogisticRegression(**params)
+  clf = LogisticRegression(**clf_params)
 
   param_space = {
     'C': stats.uniform(0.1, 2),
@@ -57,8 +63,8 @@ if __name__ == '__main__':
     'class_weight': ['balanced', None],
     'max_iter': stats.randint(100, 1000),
   }
-    
-  random_search = RandomizedSearchCV(clf, param_space, n_iter=100, cv=5, iid=False, verbose=1)
+
+  random_search = RandomizedSearchCV(clf, param_space, n_iter=200, cv=10, iid=False, verbose=1, n_jobs=32)
 
   logger.info("Starting random search...")
   t1 = datetime.datetime.now()
