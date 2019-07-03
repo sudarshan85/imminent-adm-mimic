@@ -13,10 +13,10 @@ from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-from args import args
+from args import args, ia_params, ps_params
 from utils.splits import set_two_splits
 
-def run(task, ori_df, threshold):
+def run(task, ori_df, params, threshold):
   preds = []
   targs = []
   probs = []
@@ -35,7 +35,7 @@ def run(task, ori_df, threshold):
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
     targs.append(y_test)
 
-    clf = LogisticRegression(dual=True, class_weight='balanced', solver='liblinear', C=1.5)
+    clf = LogisticRegression(**params)
     clf.fit(x_train, y_train)  
     pickle.dump(clf, open(args.modeldir/f'{task}_seed_{seed}.pkl', 'wb'))
 
@@ -51,10 +51,9 @@ def run(task, ori_df, threshold):
     pickle.dump(probs, f)
 
 if __name__=='__main__':
-  ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
-
-  imminent_df = ori_df.loc[(ori_df['imminent_label'] != -1)][['scispacy_note', 'imminent_label']].reset_index()
-  discharge_df = ori_df[['scispacy_note', 'discharge_label']].reset_index()
-
-  run('imminent', imminent_df, args.imminent_threshold)  
-  run('discharge', discharge_df, args.discharge_threshold)
+  ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
+  ia_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
+  ps_df = ori_df[args.prolonged_stay_cols].copy()
+  
+  run('imminent_adm', ia_df, ia_params, args.ia_thresh)  
+  run('prolonged_stay', ps_df, ps_params, args.ps_thresh)

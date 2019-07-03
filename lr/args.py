@@ -16,8 +16,8 @@ args = Namespace(
   dates=['charttime', 'intime'],
   modeldir=workdir/'models',
   min_freq=3,
-  imminent_threshold=0.48,
-  discharge_threshold=0.45,
+  ia_thresh=0.5,
+  ps_thresh=0.47,
   start_seed=127,
   )
 
