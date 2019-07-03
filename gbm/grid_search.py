@@ -33,7 +33,7 @@ if __name__=='__main__':
 
   df = set_group_splits(ia_df.copy(), group_col='hadm_id', seed=seed)
   vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, sublinear_tf=True, ngram_range=(2,2))
-  
+
   x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
   x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note'])
   y_train = df.loc[(df['split'] == 'train')]['imminent_adm_label'].to_numpy()
@@ -63,8 +63,8 @@ if __name__=='__main__':
     'min_data_in_leaf': [3, 10, 18],
   }
 
-  clf = lightgbm.LGBMClassifier(**parameters)
-  grid = GridSearchCV(clf, grid_params, verbose=1, cv=4, n_jobs=32)
+  clf = lightgbm.LGBMClassifier(**parameters, verbose=-1)
+  grid = GridSearchCV(clf, grid_params, cv=3, n_jobs=32, verbose=1)
 
   logger.info("Starting grid search...")
   t1 = datetime.datetime.now()
@@ -72,4 +72,4 @@ if __name__=='__main__':
   dt = datetime.datetime.now() - t1
   logger.info(f"Grid search completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes. Writing best params to {args.workdir/'best_params.json'}")
   json.dump(grid.best_params_, (args.workdir/'best_params.json').open('w'))
-  
+
