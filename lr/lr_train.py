@@ -28,8 +28,8 @@ def run(task, ori_df, params, threshold):
     df = set_two_splits(ori_df.copy(), 'test', seed=seed)
     vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, ngram_range=(2,2))
 
-    x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['scispacy_note'])
-    x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['scispacy_note'])
+    x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
+    x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note'])
 
     y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
