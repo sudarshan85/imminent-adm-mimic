@@ -52,15 +52,15 @@ if __name__ == '__main__':
 
   clf = RandomForestClassifier()
 
-  parame_space = {
+  param_space = {
     'n_estimators': stats.randint(100, 500),
     'class_weight': ['balanced', 'balanced_subsample', None],
     'criterion': ['gini', 'entropy'],
-    'max_depth': [3, None]
-    'min_samples_leaf': stats.uniform(1, 11),
-    'min_samples_split': stats.uniform(2, 11),
-    'max_features': stats.uniform(0.1, 0.9)
-    'oob_score': [True, False]
+    'max_depth': [3, None],
+    'min_samples_leaf': stats.randint(1, 11),
+    'min_samples_split': stats.randint(2, 11),
+    'max_features': stats.uniform(0.1, 0.9),
+    'oob_score': [True, False],
   }
   random_search = RandomizedSearchCV(clf, param_space, n_iter=500, cv=10, iid=False, verbose=1, n_jobs=32)
 
