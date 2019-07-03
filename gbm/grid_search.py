@@ -25,19 +25,25 @@ sh = logging.StreamHandler()
 sh.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(sh)
 
+task = 'ps'
+
 if __name__=='__main__':
   seed = 42
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
-  ia_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
-  ps_df = ori_df[args.prolonged_stay_cols].copy()
+  if task == 'ia':
+    task_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
+    label = 'imminent_adm_label'
+  if task == 'ps':
+    tasl_df = ori_df[args.prolonged_stay_cols].copy()
+    label = 'prolonged_stay_label'
 
-  df = set_group_splits(ia_df.copy(), group_col='hadm_id', seed=seed)
+  df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
   vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, sublinear_tf=True, ngram_range=(2,2))
 
   x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
   x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note'])
-  y_train = df.loc[(df['split'] == 'train')]['imminent_adm_label'].to_numpy()
-  y_test = df.loc[(df['split'] == 'test')]['imminent_adm_label'].to_numpy()
+  y_train = df.loc[(df['split'] == 'train')][label].to_numpy()
+  y_test = df.loc[(df['split'] == 'test')][label].to_numpy()
 
   parameters = {
       'objective': 'binary',
@@ -48,10 +54,7 @@ if __name__=='__main__':
       'feature_fraction': 0.8,
       'bagging_fraction': 0.75,
       'bagging_freq': 10,
-  #     'learning_rate': 0.05,
       'num_threads': 32,
-  #     'min_data_in_leaf': 3,
-  #     'num_iterations': 100,
   }
 
   grid_params = {
@@ -70,6 +73,7 @@ if __name__=='__main__':
   t1 = datetime.datetime.now()
   grid.fit(x_train, y_train)
   dt = datetime.datetime.now() - t1
-  logger.info(f"Grid search completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes. Writing best params to {args.workdir/'best_params.json'}")
-  json.dump(grid.best_params_, (args.workdir/'best_params.json').open('w'))
+  params_file = args.workdir/f'{task}_best_params.json'
+  logger.info(f"Grid search completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes. Writing best params to {params_file}")
+  json.dump(grid.best_params_, params_file.open('w'))
 
