@@ -53,16 +53,16 @@ if __name__ == '__main__':
   clf = RandomForestClassifier()
 
   param_space = {
-    'n_estimators': stats.randint(100, 500),
+    'n_estimators': stats.randint(100, 200),
     'class_weight': ['balanced', 'balanced_subsample', None],
     'criterion': ['gini', 'entropy'],
-    'max_depth': [3, None],
-    'min_samples_leaf': stats.randint(1, 11),
-    'min_samples_split': stats.randint(2, 11),
-    'max_features': stats.uniform(0.1, 0.9),
+    'max_depth': [2, 3, 4, None],
+    'min_samples_leaf': stats.randint(2, 8),
+    'min_samples_split': stats.randint(2, 8),
+    'max_features': stats.uniform(0.1, 0.5),
     'oob_score': [True, False],
   }
-  random_search = RandomizedSearchCV(clf, param_space, n_iter=500, cv=10, iid=False, verbose=1, n_jobs=32)
+  random_search = RandomizedSearchCV(clf, param_space, n_iter=200, cv=5, iid=False, verbose=1, n_jobs=32)
 
   logger.info("Starting random search...")
   t1 = datetime.datetime.now()

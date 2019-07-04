@@ -26,7 +26,7 @@ ia_params = {
   'solver': 'liblinear',
   'multi_class': 'ovr',
   'dual': True,
-  'C': 0.336
+  'C': 0.336,
 }  
 
 ps_params = {

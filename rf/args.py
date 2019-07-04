@@ -20,3 +20,15 @@ args = Namespace(
   discharge_threshold=0.35,
   start_seed=127,
   )
+
+ia_params = {
+"class_weight": 'balanced',
+"criterion": "entropy",
+"max_features": 0.12,
+"min_samples_leaf": 3,
+"min_samples_split": 7,
+"n_estimators": 108,
+"oob_score": True,
+}
+
+ps_params = {}

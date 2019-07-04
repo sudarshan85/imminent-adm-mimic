@@ -7,10 +7,9 @@ import json
 import warnings
 
 sys.path.append('../')
-warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore")
 
 import pandas as pd
-import numpy as np
 
 from scipy import stats
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -53,24 +52,26 @@ if __name__ == '__main__':
   clf_params = {
       'objective': 'binary',
       'metric': 'binary_logloss',
-      'num_iterations': 500,
   }
 
   clf = lightgbm.LGBMClassifier(**clf_params)
 
   param_space = {
+    'num_leaves': stats.randint(27, 101),
+    'bagging_fraction': stats.uniform(0.2, 0.7),
+    'learning_rate': stats.reciprocal(1e-3, 5e-1),
+    'min_data_in_leaf': stats.randint(2, 20),
     'is_unbalance': [True, False],
-    'boosting': ['gbdt', 'rf', 'dart', 'goss'],
-    'num_leaves': stats.randint(31, 62),
-    'feature_fraction': stats.uniform(0.2, 0.8),
-    'bagging_fraction': stats.uniform(0.2, 0.8),
-    'bagging_freq': stats.randint(0, 20),
-    'learning_rate': stats.reciprocal(1e-6, 1e-1),
-    'min_data_in_leaf': stats.randint(1, 11),
-    'num_iterations': stats.randint(150, 850),
+    'max_bin': stats.randint(3, 100),
+    'boosting': ['gbdt', 'dart'],
+    'bagging_freq': stats.randint(3, 31),
+    'max_depth': stats.randint(0, 11),
+    'feature_fraction': stats.uniform(0.2, 0.7),
+    'lambda_l1': stats.uniform(0, 10),
+    'num_iterations': stats.randint(100, 200),
   }
-  
-  random_search = RandomizedSearchCV(clf, param_space, n_iter=500, cv=10, iid=False, verbose=1, n_jobs=32)
+
+  random_search = RandomizedSearchCV(clf, param_space, n_iter=200, cv=5, iid=False, verbose=1, n_jobs=32)
 
   logger.info("Starting random search...")
   t1 = datetime.datetime.now()
