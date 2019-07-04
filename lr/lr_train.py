@@ -43,7 +43,7 @@ def run(task, ori_df, params, threshold):
     targs.append(y_test)
 
     clf = LogisticRegression(**params)
-    clf.fit(x_train, y_train)  
+    clf.fit(x_train, y_train)
     pickle.dump(clf, open(args.modeldir/f'{task}_seed_{seed}.pkl', 'wb'))
 
     pos_prob = clf.predict_proba(x_test)[:, 1]
@@ -59,14 +59,14 @@ def run(task, ori_df, params, threshold):
 
 if __name__=='__main__':
   if len(sys.argv) != 2:
-  logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
-  sys.exit(1)
+    logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
+    sys.exit(1)
 
   task = sys.argv[1]
-  if task != 'ia' or task != 'ps':
+  if task not in ['ia', 'ps']:
     logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
     sys.exit(1)
-  
+
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
   if task == 'ia':
     task_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
@@ -78,5 +78,5 @@ if __name__=='__main__':
     prefix = 'prolonged_stay'
     params = ps_params
     threshold = args.ps_thresh
-  
-  run(prefix, task_df, params, threshold)  
+
+  run(prefix, task_df, params, threshold)

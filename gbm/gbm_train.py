@@ -59,11 +59,11 @@ def run(task, ori_df, params, threshold):
 
 if __name__=='__main__':
   if len(sys.argv) != 2:
-  logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
-  sys.exit(1)
+    logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
+    sys.exit(1)
 
   task = sys.argv[1]
-  if task != 'ia' or task != 'ps':
+  if task not in ['ia', 'ps']:
     logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
     sys.exit(1)
   
