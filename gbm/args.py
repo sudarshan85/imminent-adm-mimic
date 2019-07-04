@@ -16,7 +16,25 @@ args = Namespace(
   dates=['charttime', 'intime'],
   modeldir=workdir/'models',
   min_freq=3,
-  imminent_threshold=0.3,
-  discharge_threshold=0.39,
+  ia_thresh=0.52,
+  ps_thresh=0.39,
   start_seed=127,
   )
+
+ia_params = {
+  "objective": "binary",
+  "metric": "binary_logloss",
+  "bagging_fraction": 0.413,
+  "bagging_freq": 20,
+  "boosting": "dart",
+  "feature_fraction": 0.288,
+  "is_unbalance": True,
+  "lambda_l1": 3.367,
+  "learning_rate": 0.037,
+  "max_bin": 9,
+  "min_data_in_leaf": 12,
+  "num_iterations": 163,
+  "num_leaves": 45,
+}
+
+ps_params = {}

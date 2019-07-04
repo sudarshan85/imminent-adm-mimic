@@ -31,6 +31,10 @@ if __name__ == '__main__':
     sys.exit(1)
 
   task = sys.argv[1]
+  if task != 'ia' or task != 'ps':
+    logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
+    sys.exit(1)
+
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
   if task == 'ia':
     logger.info(f"Running hyperparameter search for Imminent Admission Prediction task")

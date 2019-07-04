@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import logging
 import sys
 sys.path.append('../')
 
@@ -13,45 +14,35 @@ from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 import lightgbm
 
-from args import args
-from utils.splits import set_two_splits
+from args import args, ia_params, ps_params
+from utils.splits import set_group_splits
 
-parameters = {
-    'objective': 'binary',
-    'metric': 'binary_logloss',
-    'is_unbalance': 'true',
-    'boosting': 'gbdt',
-    'num_leaves': 50,
-    'feature_fraction': 0.5,
-    'bagging_fraction': 0.5,
-    'bagging_freq': 20,
-    'learning_rate': 0.05,
-    'verbose': -1,
-    'num_threads': 32,
-    'min_data_in_leaf': 3,
-    'num_iterations': 1000,
-}
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+sh = logging.StreamHandler()
+sh.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(sh)
 
-def run(task, ori_df, threshold):
+def run(task, ori_df, params, threshold):
   preds = []
   targs = []
   probs = []
-  print(f"Running for task: {task}")
+  logger.info(f"Running for task: {task}")
 
   seeds = list(range(args.start_seed, args.start_seed + 100))
 
   for seed in tqdm(seeds, desc=f'{task} Runs'):
-    df = set_two_splits(ori_df.copy(), 'test', seed=seed)
+    df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
     vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, ngram_range=(2,2))
 
-    x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['scispacy_note'])
-    x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['scispacy_note'])
+    x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
+    x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note'])
 
     y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
     targs.append(y_test)
 
-    clf = lightgbm.LGBMClassifier(**parameters)
+    clf = lightgbm.LGBMClassifier(**params, n_threads=32)
     clf.fit(x_train, y_train)  
     pickle.dump(clf, open(args.modeldir/f'{task}_seed_{seed}.pkl', 'wb'))
 
@@ -67,10 +58,25 @@ def run(task, ori_df, threshold):
     pickle.dump(probs, f)
 
 if __name__=='__main__':
-  ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols)
+  if len(sys.argv) != 2:
+  logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
+  sys.exit(1)
 
-  imminent_df = ori_df.loc[(ori_df['imminent_label'] != -1)][['scispacy_note', 'imminent_label']].reset_index()
-  discharge_df = ori_df[['scispacy_note', 'discharge_label']].reset_index()
-
-  run('imminent', imminent_df, args.imminent_threshold)  
-  run('discharge', discharge_df, args.discharge_threshold)
+  task = sys.argv[1]
+  if task != 'ia' or task != 'ps':
+    logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
+    sys.exit(1)
+  
+  ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
+  if task == 'ia':
+    task_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
+    prefix = 'imminent_adm'
+    params = ia_params
+    threshold = args.ia_thresh
+  if task == 'ps':
+    task_df = ori_df[args.prolonged_stay_cols].copy()
+    prefix = 'prolonged_stay'
+    params = ps_params
+    threshold = args.ps_thresh
+  
+  run(prefix, task_df, params, threshold)  

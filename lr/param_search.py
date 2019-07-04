@@ -63,7 +63,6 @@ if __name__ == '__main__':
     'class_weight': ['balanced', None],
     'max_iter': stats.randint(100, 1000),
   }
-
   random_search = RandomizedSearchCV(clf, param_space, n_iter=200, cv=10, iid=False, verbose=1, n_jobs=32)
 
   logger.info("Starting random search...")
