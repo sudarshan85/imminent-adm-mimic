@@ -33,7 +33,7 @@ def run_100(task, ori_df, clf_model, params, args, threshold):
   targs = []
   probs = []
 
-  seeds = list(range(args.start_seed, args.start_seed + 1))
+  seeds = list(range(args.start_seed, args.start_seed + 100))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
     df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
     vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, ngram_range=(2,2))
@@ -93,6 +93,7 @@ if __name__=='__main__':
 
   args.dataset_csv =  Path('./data/proc_dataset.csv')
   args.workdir = Path(f'./data/workdir/{clf_name}')
+  args.modeldir = args.workdir/'models'
   
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
   if task == 'ia':
@@ -106,13 +107,10 @@ if __name__=='__main__':
     params = ps_params
     threshold = args.ps_thresh
   
+  logger.info(args.workdir)
+  logger.info(args.modeldir)
   logger.info(f"Running 100 seed test run for task {task} with model {clf_name}") 
   t1 = datetime.datetime.now()
-  # run_100(prefix, task_df, clf_model, params, args, threshold)
+  run_100(prefix, task_df, clf_model, params, args, threshold)
   dt = datetime.datetime.now() - t1
   logger.info(f"100 seed test run completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes")
-  logger.info(ia_params)
-  logger.info(ps_params)
-  logger.info(args.workdir)
-  print(vars(args))
-

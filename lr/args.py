@@ -7,7 +7,6 @@ path = Path('../data')
 workdir=path/'workdir/lr'
 
 args = Namespace(
-  path=path,
   workdir=workdir,
   dataset_csv=path/'proc_dataset.csv',
   cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime'],
