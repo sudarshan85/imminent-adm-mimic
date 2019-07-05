@@ -18,11 +18,11 @@ class NoteDataset(Dataset):
     self.label_col = label_col
 
     # get maximum sequence length and +2 to account for EOS and BOS
-    self._max_seq_len = max(map(lambda context: len(context.split(' ')), self._df['scispacy_note'])) + 2
+    self._max_seq_len = max(map(lambda context: len(context.split(' ')), self._df['processed_note'])) + 2
 
   @classmethod
   def load_data_and_create_vectorizer(cls, df: pd.DataFrame, label_col: str, min_freq: int):
-    return cls(df, label_col, Vectorizer.from_dataframe(df, 'scispacy_note', min_freq))
+    return cls(df, label_col, Vectorizer.from_dataframe(df, 'processed_note', min_freq))
 
   @classmethod
   def load_data_and_vectorizer_from_file(cls, df: pd.DataFrame, label_col: str, vectorizer_path: Union[Path, str]):
@@ -47,7 +47,7 @@ class NoteDataset(Dataset):
 
   def __getitem__(self, idx):
     row = self._df.iloc[idx]
-    note_vector = np.asarray(self._vectorizer.vectorize(row['scispacy_note'], self._max_seq_len))
+    note_vector = np.asarray(self._vectorizer.vectorize(row['processed_note'], self._max_seq_len))
     class_label = np.asarray(row[self.label_col], dtype=np.float32)
 
     return (note_vector, class_label)

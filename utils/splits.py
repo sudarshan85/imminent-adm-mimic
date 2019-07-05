@@ -71,14 +71,14 @@ def set_bool_split(df, pct=0.15, seed=None):
 
   return df
 
-def set_group_splits(df, group_col, pct=0.15, seed=None):
+def set_group_splits(df, group_col, pct=0.15, name='test', seed=None):
   df['split'] = 'train'
   train_idxs, test_idxs = next(GroupShuffleSplit(test_size=pct, n_splits=2, random_state=seed).split(df, groups=df[group_col]))
-  df.loc[test_idxs, 'split'] = 'test'
+  df.loc[test_idxs, 'split'] = name
 
-  assert(set(df.loc[(df['split'] == 'train')][group_col].unique().tolist()).intersection(df[(df['split'] == 'test')][group_col].unique().tolist()) == set())
+  assert(set(df.loc[(df['split'] == 'train')][group_col].unique().tolist()).intersection(df[(df['split'] == name)][group_col].unique().tolist()) == set())
   test_near(len(df.loc[(df['split'] == 'train')])/len(df), 1-pct)
-  test_near(len(df.loc[(df['split'] == 'test')])/len(df), pct)
+  test_near(len(df.loc[(df['split'] == name)])/len(df), pct)
 
   return df  
 
