@@ -53,10 +53,15 @@ def predict_proba(clf, x_test):
   return torch.sigmoid(clf(x_test)).detach().numpy()
 
 if __name__=='__main__':
-
   if len(sys.argv) != 2:
-    print(f"Usage: {sys.argv[0]} #(1-4)")
-    sys.exit(-1)
+    logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
+    sys.exit(1)
+
+  task = sys.argv[1]
+  if task not in ['ia', 'ps']:
+    logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
+    sys.exit(1)
+
 
   partition = int(sys.argv[1])
   if partition not in [1, 2, 3, 4]:

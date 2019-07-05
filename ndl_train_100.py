@@ -33,7 +33,7 @@ def run_100(task, ori_df, clf_model, params, args, threshold):
   targs = []
   probs = []
 
-  seeds = list(range(args.start_seed, args.start_seed + 100))
+  seeds = list(range(args.start_seed, args.start_seed + 11))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
     df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
     vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, ngram_range=(2,2))
