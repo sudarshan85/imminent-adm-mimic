@@ -69,5 +69,5 @@ if __name__ == '__main__':
   random_search.fit(x_train, y_train)
   dt = datetime.datetime.now() - t1
   params_file = args.workdir/f'{task}_best_params.json'
-  logger.info(f"Random search completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes. Writing best params to {params_file}")
+  logger.info(f"Random search completed. Took {dt.days} days, {dt.seconds//3600} hours, and {(dt.seconds//60)%60} minutes. Writing best params to {params_file}")
   json.dump(random_search.best_params_, params_file.open('w'))

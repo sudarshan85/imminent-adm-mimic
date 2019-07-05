@@ -46,7 +46,7 @@ def run_100(task, ori_df, clf_model, params, args, threshold):
     targs.append(y_test)
 
     clf = clf_model(**params)
-    clf.fit(x_train, y_train)  
+    clf.fit(x_train, y_train)
     pickle.dump(clf, open(args.modeldir/f'{task}_seed_{seed}.pkl', 'wb'))
 
     pos_prob = clf.predict_proba(x_test)[:, 1]
@@ -94,7 +94,7 @@ if __name__=='__main__':
   args.dataset_csv =  Path('./data/proc_dataset.csv')
   args.workdir = Path(f'./data/workdir/{clf_name}')
   args.modeldir = args.workdir/'models'
-  
+
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
   if task == 'ia':
     task_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
@@ -106,11 +106,11 @@ if __name__=='__main__':
     prefix = 'prolonged_stay'
     params = ps_params
     threshold = args.ps_thresh
-  
+
   logger.info(args.workdir)
   logger.info(args.modeldir)
-  logger.info(f"Running 100 seed test run for task {task} with model {clf_name}") 
+  logger.info(f"Running 100 seed test run for task {task} with model {clf_name}")
   t1 = datetime.datetime.now()
   run_100(prefix, task_df, clf_model, params, args, threshold)
   dt = datetime.datetime.now() - t1
-  logger.info(f"100 seed test run completed. Took {dt.seconds//3600} hours and {(dt.seconds//60)%60} minutes")
+  logger.info(f"100 seed test run completed. Took {dt.days} days, {dt.seconds//3600} hours, and {(dt.seconds//60)%60} minutes")
