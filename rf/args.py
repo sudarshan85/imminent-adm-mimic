@@ -30,4 +30,12 @@ ia_params = {
 "oob_score": True,
 }
 
-ps_params = {}
+ps_params = {
+  "class_weight": 'balanced',
+  "criterion": "entropy",
+  "max_features": 0.114,
+  "min_samples_leaf": 5,
+  "min_samples_split": 3,
+  "n_estimators": 116,
+  "oob_score": True
+}
