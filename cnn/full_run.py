@@ -68,14 +68,13 @@ if __name__=='__main__':
 
   args.device = int(sys.argv[4])
   seeds = list(range(start_seed, end_seed))
+  args.n_epochs = 2
 
   preds = []
   targs = []
   probs = []
 
   logger.info("Starting run")
-  logger.debug("Loading data...")
-
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
   if task == 'ia':
     task_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
@@ -90,17 +89,15 @@ if __name__=='__main__':
   for seed in seeds:
     args.checkpointer_prefix = prefix + '_seed_' + str(seed)
     logger.info(f"Splitting data with seed: {seed}")
-    # df = set_group_splits(ori_df.copy(), 'test', seed=seed)
-    df = get_sample(set_group_splits(ori_df.copy(), 'test', seed=seed))
-    dc = DataContainer(df, NoteDataset, args.workdir, bs=args.batch_size, with_test=True,
-        min_freq=args.min_freq, create_vec=True, weighted_sampling=True)
+    # df = set_group_splits(task_df.copy(), 'hadm_id', seed=seed)
+    df = get_sample(set_group_splits(task_df.copy(), 'hadm_id', seed=seed))
+    dc = DataContainer(df, f'{prefix}_label', NoteDataset, args.workdir, bs=args.batch_size, with_test=True, min_freq=args.min_freq, create_vec=True, weighted_sampling=True)
 
     pe = PretrainedEmbeddings.from_file(args.emb_path)
     pe.make_custom_embeddings(dc.get_vocab_tokens())
 
     logger.debug("Creating model...")
-    classifier = NoteClassifier(args.emb_sz, dc.get_vocab_size(), args.n_channels, args.hidden_dim,
-        dc.n_classes, dropout_p=args.dropout_p, emb_dropout=args.emb_dropout, pretrained=pe.custom_embeddings)
+    classifier = NoteClassifier(args.emb_sz, dc.get_vocab_size(), args.n_channels, args.hidden_dim,dc.n_classes, dropout_p=args.dropout_p, emb_dropout=args.emb_dropout, pretrained=pe.custom_embeddings)
 
     optimizer = optim.Adam(classifier.parameters(), lr=args.lr, weight_decay=args.wd)
     reduce_lr = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.33, patience=1)
@@ -111,7 +108,7 @@ if __name__=='__main__':
 
     ig = IgniteTrainer(mc, dc, args, metrics, log_training=False, early_stop=False, verbose=False)
     ig.run()
-
+    
     # load the latest model
     model_file = args.checkpointer_prefix + '_' + args.checkpointer_name + '_' + str(args.n_epochs) + '.pth'
     logger.info(f"Loading model from {model_file}")
