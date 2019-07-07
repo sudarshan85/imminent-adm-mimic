@@ -61,14 +61,13 @@ if __name__=='__main__':
   if task not in ['ia', 'ps']:
     logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
     sys.exit(1)
-  
+
   start_seed = int(sys.argv[2])
   n_runs = int(sys.argv[3])
   end_seed = start_seed + n_runs
 
-  args.device = int(sys.argv[4])
+  args.device = f'cuda:{int(sys.argv[4])}'
   seeds = list(range(start_seed, end_seed))
-  args.n_epochs = 2
 
   preds = []
   targs = []
@@ -89,8 +88,8 @@ if __name__=='__main__':
   for seed in seeds:
     args.checkpointer_prefix = prefix + '_seed_' + str(seed)
     logger.info(f"Splitting data with seed: {seed}")
-    # df = set_group_splits(task_df.copy(), 'hadm_id', seed=seed)
-    df = get_sample(set_group_splits(task_df.copy(), 'hadm_id', seed=seed))
+    df = set_group_splits(task_df.copy(), 'hadm_id', seed=seed)
+    # df = get_sample(set_group_splits(task_df.copy(), 'hadm_id', seed=seed))
     dc = DataContainer(df, f'{prefix}_label', NoteDataset, args.workdir, bs=args.batch_size, with_test=True, min_freq=args.min_freq, create_vec=True, weighted_sampling=True)
 
     pe = PretrainedEmbeddings.from_file(args.emb_path)
@@ -108,7 +107,7 @@ if __name__=='__main__':
 
     ig = IgniteTrainer(mc, dc, args, metrics, log_training=False, early_stop=False, verbose=False)
     ig.run()
-    
+
     # load the latest model
     model_file = args.checkpointer_prefix + '_' + args.checkpointer_name + '_' + str(args.n_epochs) + '.pth'
     logger.info(f"Loading model from {model_file}")

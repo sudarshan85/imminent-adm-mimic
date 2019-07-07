@@ -21,13 +21,14 @@ args = Namespace(
   )
 
 ia_params = {
-"class_weight": 'balanced',
-"criterion": "entropy",
-"max_features": 0.12,
-"min_samples_leaf": 3,
-"min_samples_split": 7,
-"n_estimators": 108,
-"oob_score": True,
+  "class_weight": 'balanced',
+  "criterion": "entropy",
+  "max_features": 0.12,
+  "min_samples_leaf": 3,
+  "min_samples_split": 7,
+  "n_estimators": 108,
+  "oob_score": True,
+  "n_jobs": 32,
 }
 
 ps_params = {
@@ -37,5 +38,6 @@ ps_params = {
   "min_samples_leaf": 5,
   "min_samples_split": 3,
   "n_estimators": 116,
-  "oob_score": True
+  "oob_score": True,
+  "n_jobs": 32,
 }
