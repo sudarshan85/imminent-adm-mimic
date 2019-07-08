@@ -53,4 +53,5 @@ class NoteClassifier(nn.Module):
     hidden_vector = self.relu(hidden_vector)
     prediction_vector = self.fc2(hidden_vector)
 
+    # return prediction_vector.squeeze(dim=1)
     return prediction_vector.squeeze(dim=1)
