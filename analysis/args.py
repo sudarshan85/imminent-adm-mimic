@@ -12,16 +12,18 @@ args = Namespace(
   proc_csv=path/'proc_dataset.csv',
   imminent_adm_cols=['hadm_id', 'imminent_adm_label'],
   prolonged_stay_cols=['hadm_id', 'prolonged_stay_label'],
-  # cols=['imminent_adm_label', 'prolonged_stay_label', 'scispacy_note', 'charttime', 'intime'],
-  # dates=['charttime', 'intime'],
-  # imminent_threshold={
-  #   'lr': 0.47,
-  #   'rf': 0.32,
-  #   'gbm': 0.3,
-  #   },
-  # discharge_threshold={
-  #   'lr': 0.48,
-  #   'rf': 0.37,
-  #   'gbm': 0.39,
-  #   },
+  cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime'],
+  dates=['charttime', 'intime'],
+  ia_thresh={
+    'lr': 0.5,
+    'rf': 0.32,
+    'gbm': 0.52,
+    'cnn': 0.2,
+    },
+  ps_thresh={
+    'lr': 0.47,
+    'rf': 0.35,
+    'gbm': 0.45,
+    'cnn': 0.33,
+    },
 )
