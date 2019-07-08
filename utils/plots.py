@@ -111,7 +111,8 @@ def plot_roc(ax, y_true, prob):
   fpr, tpr, _ = roc_curve(y_true, prob)
   ax.set_xlabel("False Positive Rate")
   ax.set_ylabel("Recall")
-  # ax.set_title("Receiver Operation Characteristics Curve")
+  ax.set_ylabel("Sensitivity")
+  ax.set_xlabel("1 - Specificity")
   ax.plot([0, 1], [0, 1], linestyle='--')
   ax.plot(fpr, tpr, marker='.')
 
@@ -175,3 +176,23 @@ def plot_thresh_range(ax, y_true, prob, lower=0, upper=1, n_vals=5):
   ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
   ax.grid(b=True, which='minor', color='#d3d3d3', linewidth=0.5)
   ax.legend(loc='upper right')
+
+def plot_youden(ax, y_true, prob, lower=0, upper=1, n_vals=5):
+  youden_idxs = np.zeros(n_vals)
+  thresh_range = np.round(np.linspace(lower, upper, n_vals), 2)
+  
+  for i, thresh in enumerate(thresh_range):
+    y_pred = (prob > thresh).astype(np.int64)
+    cm = confusion_matrix(y_true, y_pred)
+    tn,fp,fn,tp = cm[0][0],cm[0][1],cm[1][0],cm[1][1]
+    youden_idxs[i] = tp/(tp+fn) + tn/(tn+fp)
+    
+  youden_idxs = youden_idxs.reshape(1,-1)
+  df = pd.DataFrame(youden_idxs, index=['youden_idx'], columns=thresh_range)
+  df=df.stack().reset_index()
+  df.columns = ['Metric','threshold','youden_idx']
+  ax = sns.pointplot(x='threshold', y='youden_idx',data=df)
+  ax.set_xlabel('Threshold')
+  ax.set_ylabel('Youden Index')
+  ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
+  ax.grid(b=True, which='minor', color='#d3d3d3', linewidth=0.5)  
