@@ -9,14 +9,14 @@ workdir=path/'workdir/lr'
 args = Namespace(
   workdir=workdir,
   dataset_csv=path/'proc_dataset.csv',
-  cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime'],
+  cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime', 'chartinterval'],
   imminent_adm_cols=['hadm_id', 'processed_note', 'imminent_adm_label'],
   prolonged_stay_cols=['hadm_id', 'processed_note', 'prolonged_stay_label'],
   dates=['charttime', 'intime'],
   modeldir=workdir/'models',
   min_freq=3,
-  ia_thresh=0.5,
-  ps_thresh=0.47,
+  ia_thresh=0.45,
+  ps_thresh=0.39,
   start_seed=127,
   )
 
@@ -33,6 +33,5 @@ ps_params = {
   'solver': 'liblinear',
   'multi_class': 'ovr',
   'dual': True,
-  'C': 0.145
 }
 
