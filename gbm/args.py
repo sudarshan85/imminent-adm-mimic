@@ -9,13 +9,13 @@ workdir=path/'workdir/gbm'
 args = Namespace(
   workdir=workdir,
   dataset_csv=path/'proc_dataset.csv',
-  cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime'],
+  cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime', 'chartinterval'],
   imminent_adm_cols=['hadm_id', 'processed_note', 'imminent_adm_label'],
   prolonged_stay_cols=['hadm_id', 'processed_note', 'prolonged_stay_label'],
   dates=['charttime', 'intime'],
   modeldir=workdir/'models',
   min_freq=3,
-  ia_thresh=0.526,
+  ia_thresh=0.46,
   ps_thresh=0.45,
   start_seed=127,
   )
