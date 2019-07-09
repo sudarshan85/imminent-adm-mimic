@@ -102,7 +102,7 @@ if __name__=='__main__':
     params = ia_params
     threshold = args.ia_thresh
   if task == 'ps':
-    task_df = ori_df[args.prolonged_stay_cols].copy()
+    task_df = ps_df = ori_df.loc[(ori_df['chartinterval'] != 0)][args.prolonged_stay_cols].reset_index(drop=True)
     prefix = 'prolonged_stay'
     params = ps_params
     threshold = args.ps_thresh
