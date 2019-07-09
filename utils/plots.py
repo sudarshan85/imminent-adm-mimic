@@ -115,6 +115,8 @@ def plot_roc(ax, y_true, prob):
   ax.set_xlabel("1 - Specificity")
   ax.plot([0, 1], [0, 1], linestyle='--')
   ax.plot(fpr, tpr, marker='.')
+  ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
+  ax.grid(b=True, which='minor', color='#d3d3d3', linewidth=0.5)
 
 def plot_mean_roc(ax, y_trues, probs):
   tprs = []
@@ -139,17 +141,19 @@ def plot_mean_roc(ax, y_trues, probs):
   ax.fill_between(base_fpr, tprs_lower, tprs_upper, color='grey', alpha=0.3)
 
   ax.plot([0, 1], [0, 1],'r--')
-  # ax.set_ylabel("True Positive Rate")
-  # ax.set_xlabel("False Positive Rate")
-  # ax.set_title("Mean ROC Curve ")
+  ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
+  ax.grid(b=True, which='minor', color='#d3d3d3', linewidth=0.5)
+  ax.set_ylabel("Sensitivity")
+  ax.set_xlabel("1 - Specificity")
+  
 
 def plot_auprc(ax, y_true, probs):
   ap = average_precision_score(y_true, probs)
   precision, recall, _ = precision_recall_curve(y_true, probs)
   auprc = auc(recall, precision)
 
-  ax.set_xlabel("Recall")
-  ax.set_ylabel("Precision")
+  ax.set_xlabel("Sensitivity")
+  ax.set_ylabel("PPV")
   # ax.set_title("Precision-Recall Curve")
   ax.plot([0, 1], [0.5, 0.5], linestyle='--')
   ax.plot(recall, precision, marker='.')
