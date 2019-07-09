@@ -31,7 +31,7 @@ if __name__ == '__main__':
     sys.exit(1)
 
   task = sys.argv[1]
-  if task != 'ia' or task != 'ps':
+  if task not in ['ia', 'ps']:
     logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
     sys.exit(1)
 
@@ -42,31 +42,29 @@ if __name__ == '__main__':
     label = 'imminent_adm_label'
   if task == 'ps':
     logger.info(f"Running hyperparameter search for Prolonged Stay Prediction task ")
-    task_df = ori_df[args.prolonged_stay_cols].copy()
+    ps_df = ori_df.loc[(ori_df['chartinterval'] != 0)][args.prolonged_stay_cols].reset_index(drop=True)
     label = 'prolonged_stay_label'
 
-  df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=42)
+  df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=643)
   vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, sublinear_tf=True, ngram_range=(2,2))
 
   x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
-  x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note'])
   y_train = df.loc[(df['split'] == 'train')][label].to_numpy()
-  y_test = df.loc[(df['split'] == 'test')][label].to_numpy()
 
   clf_params = {
       'objective': 'binary',
       'metric': 'binary_logloss',
+      'is_unbalance': True,
   }
 
   clf = lightgbm.LGBMClassifier(**clf_params)
 
   param_space = {
-    'num_leaves': stats.randint(27, 101),
+    'num_leaves': stats.randint(30, 60),
     'bagging_fraction': stats.uniform(0.2, 0.7),
-    'learning_rate': stats.reciprocal(1e-3, 5e-1),
+    'learning_rate': stats.uniform(0.1, 0.9),
     'min_data_in_leaf': stats.randint(2, 20),
-    'is_unbalance': [True, False],
-    'max_bin': stats.randint(3, 100),
+    'max_bin': stats.randint(3, 20),
     'boosting': ['gbdt', 'dart'],
     'bagging_freq': stats.randint(3, 31),
     'max_depth': stats.randint(0, 11),
