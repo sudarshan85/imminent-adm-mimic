@@ -42,7 +42,7 @@ if __name__ == '__main__':
     label = 'imminent_adm_label'
   if task == 'ps':
     logger.info(f"Running hyperparameter search for Prolonged Stay Prediction task ")
-    ps_df = ori_df.loc[(ori_df['chartinterval'] != 0)][args.prolonged_stay_cols].reset_index(drop=True)
+    task_df = ori_df.loc[(ori_df['chartinterval'] != 0)][args.prolonged_stay_cols].reset_index(drop=True)
     label = 'prolonged_stay_label'
 
   df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=643)
