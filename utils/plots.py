@@ -47,7 +47,7 @@ def print_top_words(feature_names: List[str], probs: np.ndarray, N: int):
   for feat in neg:
     print(np.round(feat[0], 2), feat[1])
 
-def plot_prob(ax, df, model, threshold, starting_day, ending_day, interval_hours, is_agg=False, is_log=False):
+def plot_prob(ax, df, threshold, starting_day, ending_day, interval_hours, is_agg=False, is_log=False):
   if starting_day > 0:
     warnings.warn(f"starting_day ({starting_day}) must be negative. Converting it to negative")
     starting_day = -starting_day
@@ -62,18 +62,18 @@ def plot_prob(ax, df, model, threshold, starting_day, ending_day, interval_hours
 
   high = pd.to_timedelta(ending_day, unit='d')
   low = pd.to_timedelta(starting_day, unit='d')  
-  plot_data = df.loc[(df['relative_charttime'] > low) & (df['relative_charttime'] < high)][['relative_charttime', f'{model}_prob']].copy()
+  plot_data = df.loc[(df['relative_charttime'] > low) & (df['relative_charttime'] < high)][['relative_charttime', 'prob']].copy()
   plot_data['interval'] = ((plot_data['relative_charttime'].apply(lambda curr_time: int((curr_time - df['relative_charttime'].max())/pd.to_timedelta(interval_hours, unit='h')))))/2
 
   if is_agg:
-    plot_data = plot_data[['interval', f'{model}_prob']].groupby(['interval']).agg(lambda x: np.average(x, weights=plot_data.loc[x.index, f'{model}_prob']))
+    plot_data = plot_data[['interval', 'prob']].groupby(['interval']).agg(lambda x: np.average(x, weights=plot_data.loc[x.index, 'prob']))
 
   plot_data.reset_index(inplace=True)
   if is_log:
     plot_data['interval'] = -np.log1p(-plot_data['interval'])
 
   ax.axhline(y=threshold, label=f'Threshold = {threshold}', linestyle='--', color='r')
-  sns.lineplot(x='interval', y=f'{model}_prob', data=plot_data, ax=ax)
+  sns.lineplot(x='interval', y='prob', data=plot_data, ax=ax)
   # ax.set_xlabel(f'Time to ICU (days)')
   # ax.set_ylabel('Probability')
   ax.set_xlabel('')
