@@ -109,10 +109,8 @@ def plot_confusion_matrix(ax, cm, classes, normalize=False, title=None, cmap=plt
 
 def plot_roc(ax, y_true, prob):
   fpr, tpr, _ = roc_curve(y_true, prob)
-  ax.set_xlabel("False Positive Rate")
-  ax.set_ylabel("Recall")
-  ax.set_ylabel("Sensitivity")
-  ax.set_xlabel("1 - Specificity")
+  ax.set_ylabel('Sensitivity')
+  ax.set_xlabel('1 - Specificity')
   ax.plot([0, 1], [0, 1], linestyle='--')
   ax.plot(fpr, tpr, marker='.')
   ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
@@ -149,7 +147,6 @@ def plot_mean_roc(ax, y_trues, probs, is_individual=False):
   ax.plot([0, 1], [0, 1], color='silver', linestyle=':')
   ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
   ax.grid(b=True, which='minor', color='#d3d3d3', linewidth=0.5)
-  ax.set_facecolor('white')
   ax.set_ylabel('Sensitivity')
   ax.set_xlabel('1 - Specificity')
   
