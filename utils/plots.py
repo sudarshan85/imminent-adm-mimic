@@ -118,14 +118,16 @@ def plot_roc(ax, y_true, prob):
   ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
   ax.grid(b=True, which='minor', color='#d3d3d3', linewidth=0.5)
 
-def plot_mean_roc(ax, y_trues, probs):
+def plot_mean_roc(ax, y_trues, probs, is_individual=False):
+  curve_color = 'navy'
+  if is_individual:
+    curve_color  = 'white'
+
   tprs = []
   base_fpr = np.linspace(0, 1, len(y_trues))
 
   for i, (y_test, pos_prob) in enumerate(zip(y_trues, probs)):
     fpr, tpr, _ = roc_curve(y_test, pos_prob)
-
-    ax.plot(fpr, tpr, 'b', alpha=0.15)
     tpr = interp(base_fpr, fpr, tpr)
     tpr[0] = 0.0
     tprs.append(tpr)
@@ -137,14 +139,19 @@ def plot_mean_roc(ax, y_trues, probs):
   tprs_upper = np.minimum(mean_tprs + std, 1)
   tprs_lower = mean_tprs - std
 
-  ax.plot(base_fpr, mean_tprs, marker='.', color='white')
-  ax.fill_between(base_fpr, tprs_lower, tprs_upper, color='grey', alpha=0.3)
+  ax.plot(base_fpr, mean_tprs, color=curve_color, marker='.')
+  if is_individual:
+    for i, (y_test, pos_prob) in enumerate(zip(y_trues, probs)):
+      fpr, tpr, _ = roc_curve(y_test, pos_prob)
+      ax.plot(fpr, tpr, color='blue', alpha=0.15)
+      ax.fill_between(base_fpr, tprs_lower, tprs_upper, color='grey', alpha=0.3)
 
-  ax.plot([0, 1], [0, 1],'r--')
+  ax.plot([0, 1], [0, 1], color='silver', linestyle=':')
   ax.grid(b=True, which='major', color='#d3d3d3', linewidth=1.0)
   ax.grid(b=True, which='minor', color='#d3d3d3', linewidth=0.5)
-  ax.set_ylabel("Sensitivity")
-  ax.set_xlabel("1 - Specificity")
+  ax.set_facecolor('white')
+  ax.set_ylabel('Sensitivity')
+  ax.set_xlabel('1 - Specificity')
   
 
 def plot_auprc(ax, y_true, probs):
