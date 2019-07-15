@@ -38,15 +38,15 @@ def run_100(task, task_df, args, threshold):
   probs = []
 
   reduce_lr = LRScheduler(
-    policy='ReduceLROnPlateau',  
+    policy='ReduceLROnPlateau',
     mode='min',
     factor=0.5,
     patience=1,
   )
 
-  # seeds = list(range(args.start_seed, args.start_seed + 100))
-  seeds = [643]
+  seeds = list(range(args.start_seed, args.start_seed + 25))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
+    logger.info(f"Spliting with seed {seed}")
     checkpoint = Checkpoint(
       dirname=args.modeldir/f'{task}_seed_{seed}',
     )
@@ -78,7 +78,7 @@ def run_100(task, task_df, args, threshold):
       verbose=1,
       callbacks=[EarlyStopping, checkpoint, reduce_lr, ProgressBar],
       train_split=CVSplit(cv=0.15, stratified=True),
-      iterator_train__shuffle=True, 
+      iterator_train__shuffle=True,
       iterator_train__num_workers=4,
       iterator_train__pin_memory=True,
       iterator_train__drop_last=True,
