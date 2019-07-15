@@ -3,6 +3,7 @@
 import datetime
 import logging
 import sys
+sys.path.append('../')
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -15,12 +16,15 @@ from tqdm import tqdm
 from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from torch import optim
+
 from skorch import NeuralNetBinaryClassifier
 from skorch.dataset import CVSplit
 from skorch.callbacks import *
 
 from utils.splits import set_group_splits
-from classifier_model import NNClassifier, CNNClassifier
+from classifier_model import NNClassifier
+from args import args
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -28,31 +32,68 @@ sh = logging.StreamHandler()
 sh.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(sh)
 
-def run_100(task, ori_df, clf_model, params, args, threshold):
+def run_100(task, task_df, args, threshold):
   preds = []
   targs = []
   probs = []
 
-  seeds = list(range(args.start_seed, args.start_seed + 100))
-  for seed in tqdm(seeds, desc=f'{task} Runs'):
-    df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
-    vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, ngram_range=(2,2))
+  reduce_lr = LRScheduler(
+    policy='ReduceLROnPlateau',  
+    mode='min',
+    factor=0.5,
+    patience=1,
+  )
 
-    x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
-    x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note'])
+  # seeds = list(range(args.start_seed, args.start_seed + 100))
+  seeds = [643]
+  for seed in tqdm(seeds, desc=f'{task} Runs'):
+    checkpoint = Checkpoint(
+      dirname=args.modeldir/f'{task}_seed_{seed}',
+    )
+    df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
+    vectorizer = TfidfVectorizer(min_df=args.min_freq, binary=True, analyzer=str.split, sublinear_tf=True)
+
+    x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note']).astype(np.float32)
+    x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note']).astype(np.float32)
+
+    x_train = np.asarray(x_train.todense())
+    x_test = np.asarray(x_test.todense())
+    vocab_sz = len(vectorizer.vocabulary_)
 
     y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
     targs.append(y_test)
 
-    clf = clf_model(**params)
-    clf.fit(x_train, y_train)
-    pickle.dump(clf, open(args.modeldir/f'{task}_seed_{seed}.pkl', 'wb'))
+    net = NeuralNetBinaryClassifier(
+      NNClassifier,
+      module__vocab_sz=vocab_sz,
+      module__hidden_dim=args.hidden_dim,
+      module__dropout_p=args.dropout_p,
+      max_epochs=args.max_epochs,
+      lr=args.lr,
+      device=args.device,
+      optimizer=optim.Adam,
+      optimizer__weight_decay=args.wd,
+      batch_size=args.batch_size,
+      verbose=1,
+      callbacks=[EarlyStopping, checkpoint, reduce_lr, ProgressBar],
+      train_split=CVSplit(cv=0.15, stratified=True),
+      iterator_train__shuffle=True, 
+      iterator_train__num_workers=4,
+      iterator_train__pin_memory=True,
+      iterator_train__drop_last=True,
+      iterator_valid__num_workers=4,
+      iterator_valid__pin_memory=True,
+      threshold=threshold,
+    )
+    net.set_params(callbacks__valid_acc=None)
+    net.fit(x_train, y_train.astype(np.float32))
+    net.load_params(checkpoint=checkpoint)
 
-    pos_prob = clf.predict_proba(x_test)[:, 1]
+    pos_prob = net.predict_proba(x_test)
     probs.append(pos_prob)
 
-    y_pred = (pos_prob > threshold).astype(np.int64)
+    y_pred = net.predict(x_test)
     preds.append(y_pred)
 
   with open(args.workdir/f'{task}_preds.pkl', 'wb') as f:
@@ -61,8 +102,8 @@ def run_100(task, ori_df, clf_model, params, args, threshold):
     pickle.dump(probs, f)
 
 if __name__=='__main__':
-  if len(sys.argv) != 3:
-    logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps) model_name (nn|cnn)")
+  if len(sys.argv) != 2:
+    logger.error(f"Usage: {sys.argv[0]} task_name (ia|ps)")
     sys.exit(1)
 
   task = sys.argv[1]
@@ -70,47 +111,19 @@ if __name__=='__main__':
     logger.error("Task values are either ia (imminent admission) or ps (prolonged stay)")
     sys.exit(1)
 
-  clf_name = sys.argv[2]
-  if clf_name not in ['nn', 'cnn']:
-    logger.error("Allowed models are nn (feed forward neural network), cnn (convolutional neural network)")
-    sys.exit(1)
-
-  if clf_name == 'nn':
-    clf_model = LogisticRegression
-    args = lr.args.args
-    ia_params = lr.args.ia_params
-    ps_params = lr.args.ps_params
-  elif clf_name == 'rf':
-    clf_model = RandomForestClassifier
-    args = rf.args.args
-    ia_params = rf.args.ia_params
-    ps_params = rf.args.ps_params
-  else:
-    clf_model = lightgbm.LGBMClassifier
-    args = gbm.args.args
-    ia_params = gbm.args.ia_params
-    ps_params = gbm.args.ps_params
-
-  args.dataset_csv =  Path('./data/proc_dataset.csv')
-  args.workdir = Path(f'./data/workdir/{clf_name}')
   args.modeldir = args.workdir/'models'
-
   ori_df = pd.read_csv(args.dataset_csv, usecols=args.cols, parse_dates=args.dates)
   if task == 'ia':
     task_df = ori_df.loc[(ori_df['imminent_adm_label'] != -1)][args.imminent_adm_cols].reset_index(drop=True)
     prefix = 'imminent_adm'
-    params = ia_params
     threshold = args.ia_thresh
   if task == 'ps':
     task_df = ps_df = ori_df.loc[(ori_df['chartinterval'] != 0)][args.prolonged_stay_cols].reset_index(drop=True)
     prefix = 'prolonged_stay'
-    params = ps_params
     threshold = args.ps_thresh
 
-  logger.info(args.workdir)
-  logger.info(args.modeldir)
-  logger.info(f"Running 100 seed test run for task {task} with model {clf_name}")
+  logger.info(f"Running 100 seed test run for task {task}")
   t1 = datetime.datetime.now()
-  run_100(prefix, task_df, clf_model, params, args, threshold)
+  run_100(prefix, task_df, args, threshold)
   dt = datetime.datetime.now() - t1
   logger.info(f"100 seed test run completed. Took {dt.days} days, {dt.seconds//3600} hours, and {(dt.seconds//60)%60} minutes")

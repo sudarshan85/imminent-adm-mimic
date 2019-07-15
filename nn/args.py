@@ -3,10 +3,8 @@
 from argparse import Namespace
 from pathlib import Path
 
-path = Path('data')
-glove_path = Path('pretrained/glove')
-fasttext_path = Path('pretrained/fasttext')
-workdir=path/'workdir/dl'
+path = Path('../data')
+workdir=path/'workdir/nn'
 
 args = Namespace(
   workdir=workdir,
@@ -23,6 +21,8 @@ args = Namespace(
   dropout_p=0.1 ,
   lr=1e-3,
   wd=1e-3,
+  max_lr=1e-1,
   max_epochs=100,
   ia_thresh=0.2,
+  ps_thresh=0.5,
 )
