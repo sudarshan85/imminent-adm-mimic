@@ -19,30 +19,34 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from torch import optim
 
 from skorch import NeuralNetBinaryClassifier
-from skorch.toy import MLPModule
 from skorch.dataset import CVSplit
 from skorch.callbacks import *
 
 from utils.splits import set_group_splits
+from classifier_model import NNClassifier
 from args import args
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 sh = logging.StreamHandler()
 sh.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(sh)
 
 def run_100(task, task_df, args, threshold):
+  preds = []
+  targs = []
+  probs = []
+
   reduce_lr = LRScheduler(
     policy='ReduceLROnPlateau',
     mode='min',
     factor=0.5,
     patience=1,
-  )  
+  )
 
   seeds = list(range(args.start_seed, args.start_seed + 100))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
-    logger.info(f"Spliting with seed {seed}")
+    # logger.info(f"Spliting with seed {seed}")
     checkpoint = Checkpoint(
       dirname=args.modeldir/f'{task}_seed_{seed}',
     )
@@ -58,11 +62,13 @@ def run_100(task, task_df, args, threshold):
 
     y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
-
-    classifier = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)  
+    targs.append(y_test)
 
     net = NeuralNetBinaryClassifier(
-      classifier,
+      NNClassifier,
+      module__vocab_sz=vocab_sz,
+      module__hidden_dim=args.hidden_dim,
+      module__dropout_p=args.dropout_p,
       max_epochs=args.max_epochs,
       lr=args.lr,
       device=args.device,
@@ -70,9 +76,9 @@ def run_100(task, task_df, args, threshold):
       optimizer__weight_decay=args.wd,
       batch_size=args.batch_size,
       verbose=1,
-      callbacks=[EarlyStopping, checkpoint, reduce_lr],
+      callbacks=[EarlyStopping, checkpoint, reduce_lr, ProgressBar],
       train_split=CVSplit(cv=0.15, stratified=True),
-      iterator_train__shuffle=True, 
+      iterator_train__shuffle=True,
       iterator_train__num_workers=4,
       iterator_train__pin_memory=True,
       iterator_train__drop_last=True,
@@ -80,8 +86,20 @@ def run_100(task, task_df, args, threshold):
       iterator_valid__pin_memory=True,
       threshold=threshold,
     )
-    net.set_params(callbacks__valid_acc=None);
-    net.fit(x_train, y_train.astype(np.float32))
+    net.set_params(callbacks__valid_acc=None)
+    net.initialize()
+    net.load_params(checkpoint=checkpoint)
+
+    pos_prob = net.predict_proba(x_test)
+    probs.append(pos_prob)
+
+    y_pred = net.predict(x_test)
+    preds.append(y_pred)
+
+  with open(args.workdir/f'{task}_preds.pkl', 'wb') as f:
+    pickle.dump(targs, f)
+    pickle.dump(preds, f)
+    pickle.dump(probs, f)
 
 if __name__=='__main__':
   if len(sys.argv) != 2:

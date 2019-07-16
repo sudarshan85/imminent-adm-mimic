@@ -24,5 +24,5 @@ args = Namespace(
   max_lr=1e-1,
   max_epochs=100,
   ia_thresh=0.2,
-  ps_thresh=0.5,
+  ps_thresh=0.27,
 )
