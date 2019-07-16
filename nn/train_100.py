@@ -33,10 +33,6 @@ sh.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(sh)
 
 def run_100(task, task_df, args, threshold):
-  preds = []
-  targs = []
-  probs = []
-
   reduce_lr = LRScheduler(
     policy='ReduceLROnPlateau',
     mode='min',
@@ -44,7 +40,7 @@ def run_100(task, task_df, args, threshold):
     patience=1,
   )
 
-  seeds = list(range(args.start_seed, args.start_seed + 25))
+  seeds = list(range(222, 227))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
     logger.info(f"Spliting with seed {seed}")
     checkpoint = Checkpoint(
@@ -62,7 +58,6 @@ def run_100(task, task_df, args, threshold):
 
     y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
-    targs.append(y_test)
 
     net = NeuralNetBinaryClassifier(
       NNClassifier,
@@ -88,18 +83,6 @@ def run_100(task, task_df, args, threshold):
     )
     net.set_params(callbacks__valid_acc=None)
     net.fit(x_train, y_train.astype(np.float32))
-    net.load_params(checkpoint=checkpoint)
-
-    pos_prob = net.predict_proba(x_test)
-    probs.append(pos_prob)
-
-    y_pred = net.predict(x_test)
-    preds.append(y_pred)
-
-  with open(args.workdir/f'{task}_preds.pkl', 'wb') as f:
-    pickle.dump(targs, f)
-    pickle.dump(preds, f)
-    pickle.dump(probs, f)
 
 if __name__=='__main__':
   if len(sys.argv) != 2:
