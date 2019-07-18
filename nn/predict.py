@@ -19,11 +19,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from torch import optim
 
 from skorch import NeuralNetBinaryClassifier
+from skorch.toy import MLPModule
 from skorch.dataset import CVSplit
 from skorch.callbacks import *
 
 from utils.splits import set_group_splits
-from classifier_model import NNClassifier
 from args import args
 
 logger = logging.getLogger(__name__)
@@ -64,11 +64,10 @@ def run_100(task, task_df, args, threshold):
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
     targs.append(y_test)
 
+    classifier = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)
+
     net = NeuralNetBinaryClassifier(
-      NNClassifier,
-      module__vocab_sz=vocab_sz,
-      module__hidden_dim=args.hidden_dim,
-      module__dropout_p=args.dropout_p,
+      classifier,
       max_epochs=args.max_epochs,
       lr=args.lr,
       device=args.device,
@@ -76,7 +75,7 @@ def run_100(task, task_df, args, threshold):
       optimizer__weight_decay=args.wd,
       batch_size=args.batch_size,
       verbose=1,
-      callbacks=[EarlyStopping, checkpoint, reduce_lr, ProgressBar],
+      callbacks=[EarlyStopping, ProgressBar, checkpoint, reduce_lr],
       train_split=CVSplit(cv=0.15, stratified=True),
       iterator_train__shuffle=True,
       iterator_train__num_workers=4,
@@ -86,7 +85,7 @@ def run_100(task, task_df, args, threshold):
       iterator_valid__pin_memory=True,
       threshold=threshold,
     )
-    net.set_params(callbacks__valid_acc=None)
+    net.set_params(callbacks__valid_acc=None);
     net.initialize()
     net.load_params(checkpoint=checkpoint)
 

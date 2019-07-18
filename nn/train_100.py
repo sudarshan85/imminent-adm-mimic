@@ -38,9 +38,9 @@ def run_100(task, task_df, args, threshold):
     mode='min',
     factor=0.5,
     patience=1,
-  )  
+  )
 
-  seeds = list(range(args.start_seed, args.start_seed + 100))
+  seeds = list(range(197, args.start_seed + 100))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
     logger.info(f"Spliting with seed {seed}")
     checkpoint = Checkpoint(
@@ -59,7 +59,7 @@ def run_100(task, task_df, args, threshold):
     y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
 
-    classifier = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)  
+    classifier = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)
 
     net = NeuralNetBinaryClassifier(
       classifier,
@@ -70,9 +70,9 @@ def run_100(task, task_df, args, threshold):
       optimizer__weight_decay=args.wd,
       batch_size=args.batch_size,
       verbose=1,
-      callbacks=[EarlyStopping, checkpoint, reduce_lr],
+      callbacks=[EarlyStopping, ProgressBar, checkpoint, reduce_lr],
       train_split=CVSplit(cv=0.15, stratified=True),
-      iterator_train__shuffle=True, 
+      iterator_train__shuffle=True,
       iterator_train__num_workers=4,
       iterator_train__pin_memory=True,
       iterator_train__drop_last=True,
