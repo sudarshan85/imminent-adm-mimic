@@ -4,7 +4,7 @@ from argparse import Namespace
 from pathlib import Path
 
 path = Path('../data')
-workdir=path/'workdir/nn'
+workdir=path/'workdir/mlp'
 
 args = Namespace(
   workdir=workdir,
