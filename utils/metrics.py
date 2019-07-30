@@ -148,8 +148,11 @@ class BinaryAvgMetrics(object):
   
   def __repr__(self):
     s = f"Number of Runs: {self.n_runs}\n"
-    s += f"Average Prevalence of positive class: {self.prevalence_avg()}"
+    s += f"Average Prevalence of positive class: {self.prevalence_avg}"
     return s
+  
+  def __len__(self):
+    return len(self.targs)
 
 def get_best_model(bam: BinaryAvgMetrics, fnames: List[str]):
   best_se, best_se_model = 0, None
