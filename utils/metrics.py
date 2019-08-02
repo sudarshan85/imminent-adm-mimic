@@ -54,6 +54,9 @@ class BinaryAvgMetrics(object):
   @property
   def prevalence_avg(self):
     return np.round(((self.fns + self.tps) / (self.tns + self.fps + self.fns + self.tps)).mean(), self.decimal)
+
+  def sensitivities(self):
+    return self.tps / (self.tps + self.fns)
   
   def sensitivity_avg(self, conf=None):
     se = (self.tps / (self.tps + self.fns))
@@ -61,6 +64,9 @@ class BinaryAvgMetrics(object):
       return _mean_confidence_interval(se, conf)
 
     return np.round(se.mean(), self.decimal,)
+
+  def specificities(self):
+    return self.tns / (self.tns + self.fps)
   
   def specificity_avg(self, conf=None):
     sp = (self.tns / (self.tns + self.fps))
@@ -68,6 +74,9 @@ class BinaryAvgMetrics(object):
       return _mean_confidence_interval(sp, conf)
 
     return np.round(sp.mean(), self.decimal)
+
+  def ppvs(self):
+    return self.tps / (self.tps + self.fps)
   
   def ppv_avg(self, conf=None):
     ppv = (self.tps / (self.tps + self.fps))
@@ -75,6 +84,9 @@ class BinaryAvgMetrics(object):
       return _mean_confidence_interval(ppv, conf)
 
     return np.round(ppv.mean(), self.decimal)  
+
+  def npvs(self):
+    return self.tns / (self.tns + self.fns)
   
   def npv_avg(self, conf=None):
     npv = (self.tns / (self.tns + self.fns))
@@ -83,6 +95,9 @@ class BinaryAvgMetrics(object):
 
     return np.round(npv.mean(), self.decimal)
   
+  def f1s(self):
+    return (2 * self.sensitivities() * self.ppvs()) / (self.sensitivities() + self.ppvs())
+
   def f1_avg(self, conf=None):
     se = (self.tps / (self.tps + self.fns))
     ppv = (self.tps / (self.tps + self.fps))
@@ -91,6 +106,9 @@ class BinaryAvgMetrics(object):
       return _mean_confidence_interval(f1, conf)
 
     return np.round(f1.mean(), self.decimal)
+
+  def aurocs(self):
+    return np.array([roc_auc_score(targ, prob) for targ, prob in zip(self.targs, self.probs)])
 
   def auroc_avg(self, conf=None):
     auroc = np.array([roc_auc_score(targ, prob) for targ, prob in zip(self.targs, self.probs)])
@@ -148,7 +166,6 @@ class BinaryAvgMetrics(object):
   
   def __repr__(self):
     s = f"Number of Runs: {self.n_runs}\n"
-    s += f"Average Prevalence of positive class: {self.prevalence_avg}"
     return s
   
   def __len__(self):
