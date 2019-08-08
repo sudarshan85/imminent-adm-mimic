@@ -36,7 +36,7 @@ def run_100(task, ori_df, clf_model, params, args, threshold):
   seeds = list(range(args.start_seed, args.start_seed + 100))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
     df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
-    vectorizer = TfidfVectorizer(min_df=args.min_freq, analyzer=str.split, ngram_range=(2,2))
+    vectorizer = TfidfVectorizer(sublinear_tf=True, ngram_range=(1,2), binary=True, max_features=60_000)
 
     x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note'])
     x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note'])
