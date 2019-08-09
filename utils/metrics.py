@@ -15,7 +15,7 @@ def _mean_confidence_interval(data, conf=0.95, decimal=3):
   n = len(a)
   m, se = np.mean(a), stats.sem(a)
   h = se * stats.t.ppf((1 + conf) / 2., n-1)
-  return np.round(m-h, decimal), np.round(m, 3), np.round(m+h, decimal)
+  return np.round(m, 3), np.round(m-h, decimal), np.round(m+h, decimal)
 
 class BinaryAvgMetrics(object):
   def __init__(self, targets: List[int], predictions: List[int], probs: List[float], decimal=3) -> None:
@@ -158,9 +158,9 @@ class BinaryAvgMetrics(object):
       if defn:
         for metric, value in metrics.items():
           value.append(definitions[metric])
-        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Lower', 'Mean', 'Upper', 'Definition'])
+        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Mean', 'Lower', 'Upper', 'Definition'])
       else:
-        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Lower', 'Mean', 'Upper'])
+        d = pd.DataFrame(metrics.values(), index=metrics.keys(), columns=['Mean', 'Lower', 'Upper'])
 
       return d
   
