@@ -60,14 +60,13 @@ def run_100(task, task_df, args, threshold):
     x_test = np.asarray(x_test.todense())
     vocab_sz = len(vectorizer.vocabulary_)
 
-    y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
     targs.append(y_test)
 
-    classifier = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)
+    clf = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)
 
     net = NeuralNetBinaryClassifier(
-      classifier,
+      clf,
       max_epochs=args.max_epochs,
       lr=args.lr,
       device=args.device,

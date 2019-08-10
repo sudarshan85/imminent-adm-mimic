@@ -40,14 +40,14 @@ def run_100(task, task_df, args, threshold):
     patience=1,
   )
 
-  seeds = list(range(197, args.start_seed + 100))
+  seeds = list(range(args.start_seed, args.start_seed + 100))
   for seed in tqdm(seeds, desc=f'{task} Runs'):
     logger.info(f"Spliting with seed {seed}")
     checkpoint = Checkpoint(
       dirname=args.modeldir/f'{task}_seed_{seed}',
     )
     df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
-    vectorizer = TfidfVectorizer(min_df=args.min_freq, binary=True, analyzer=str.split, sublinear_tf=True)
+    vectorizer = TfidfVectorizer(sublinear_tf=True, ngram_range=(1,2), binary=True, max_features=60_000)
 
     x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note']).astype(np.float32)
     x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note']).astype(np.float32)
@@ -59,10 +59,10 @@ def run_100(task, task_df, args, threshold):
     y_train = df.loc[(df['split'] == 'train')][f'{task}_label'].to_numpy()
     y_test = df.loc[(df['split'] == 'test')][f'{task}_label'].to_numpy()
 
-    classifier = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)
+    clf = MLPModule(input_units=vocab_sz, output_units=1, hidden_units=args.hidden_dim, num_hidden=1, dropout=args.dropout_p, squeeze_output=True)
 
     net = NeuralNetBinaryClassifier(
-      classifier,
+      clf,
       max_epochs=args.max_epochs,
       lr=args.lr,
       device=args.device,
@@ -73,14 +73,9 @@ def run_100(task, task_df, args, threshold):
       callbacks=[EarlyStopping, ProgressBar, checkpoint, reduce_lr],
       train_split=CVSplit(cv=0.15, stratified=True),
       iterator_train__shuffle=True,
-      iterator_train__num_workers=4,
-      iterator_train__pin_memory=True,
-      iterator_train__drop_last=True,
-      iterator_valid__num_workers=4,
-      iterator_valid__pin_memory=True,
       threshold=threshold,
     )
-    net.set_params(callbacks__valid_acc=None);
+    net.set_params(callbacks__valid_acc=None)
     net.fit(x_train, y_train.astype(np.float32))
 
 if __name__=='__main__':
