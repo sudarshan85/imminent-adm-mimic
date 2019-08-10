@@ -51,7 +51,7 @@ def run_100(task, task_df, args, threshold):
       dirname=args.modeldir/f'{task}_seed_{seed}',
     )
     df = set_group_splits(task_df.copy(), group_col='hadm_id', seed=seed)
-    vectorizer = TfidfVectorizer(min_df=args.min_freq, binary=True, analyzer=str.split, sublinear_tf=True)
+    vectorizer = TfidfVectorizer(sublinear_tf=True, ngram_range=(1,2), binary=True, max_features=60_000)
 
     x_train = vectorizer.fit_transform(df.loc[(df['split'] == 'train')]['processed_note']).astype(np.float32)
     x_test = vectorizer.transform(df.loc[(df['split'] == 'test')]['processed_note']).astype(np.float32)
@@ -77,11 +77,6 @@ def run_100(task, task_df, args, threshold):
       callbacks=[EarlyStopping, ProgressBar, checkpoint, reduce_lr],
       train_split=CVSplit(cv=0.15, stratified=True),
       iterator_train__shuffle=True,
-      iterator_train__num_workers=4,
-      iterator_train__pin_memory=True,
-      iterator_train__drop_last=True,
-      iterator_valid__num_workers=4,
-      iterator_valid__pin_memory=True,
       threshold=threshold,
     )
     net.set_params(callbacks__valid_acc=None);
