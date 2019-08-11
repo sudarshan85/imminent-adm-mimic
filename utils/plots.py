@@ -15,23 +15,6 @@ from spacy.lang.en.stop_words import STOP_WORDS
 from sklearn.metrics import roc_auc_score, roc_curve, auc, confusion_matrix
 from sklearn.metrics import average_precision_score, precision_recall_curve
 
-def get_top_markers(feature_names, scores, n_markers=50):
-  p = re.compile('^[a-z\s]+$')
-  sorted_idxs = np.argsort(scores)
-  markers = []
-  wts = []
-
-  for i in sorted_idxs:
-    marker = feature_names[i]
-    if len(marker) > 7 and marker not in STOP_WORDS and p.match(marker):
-      markers.append(marker)
-      wts.append(scores[i])
-
-  wts = np.asarray(wts)
-  df = pd.DataFrame({'markers': markers, 'score': wts/wts.sum()}, columns=['markers', 'score'])
-  
-  return df.head(n_markers), df.tail(n_markers).sort_values(by='score').reset_index(drop=True)
-
 def get_wordcloud(feature_names, scores, n_words='all'):
   if n_words == 'all':
     n_words = len(feature_names)

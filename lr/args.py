@@ -8,6 +8,7 @@ workdir=path/'workdir/lr'
 
 args = Namespace(
   workdir=workdir,
+  figdir=path/'figures',
   dataset_csv=path/'proc_dataset.csv',
   cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime', 'chartinterval'],
   imminent_adm_cols=['hadm_id', 'processed_note', 'imminent_adm_label'],

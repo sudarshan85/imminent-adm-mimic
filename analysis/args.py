@@ -8,11 +8,10 @@ path = Path('../data')
 args = Namespace(
   workdir=path/'workdir',
   figdir=path/'figures',
-  raw_csv=path/'raw_dataset.csv',
-  proc_csv=path/'proc_dataset.csv',
-  imminent_adm_cols=['hadm_id', 'imminent_adm_label'],
-  prolonged_stay_cols=['hadm_id', 'prolonged_stay_label'],
-  cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime'],
+  dataset_csv=path/'proc_dataset.csv',
+  imminent_adm_cols=['hadm_id', 'processed_note', 'imminent_adm_label'],
+  prolonged_stay_cols=['hadm_id', 'processed_note', 'prolonged_stay_label'],
+  cols=['hadm_id', 'imminent_adm_label', 'prolonged_stay_label', 'processed_note', 'charttime', 'intime', 'chartinterval'],
   dates=['charttime', 'intime'],
   ia_thresh={
     'lr': 0.45,
